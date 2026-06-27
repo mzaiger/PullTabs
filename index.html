@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pull Tabs</title>
+<title>Pull Tab Emulator</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #1a1a2e; font-family: 'Arial Black', Impact, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; color: #fff; }
@@ -90,7 +90,7 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
   <a class="menu-item" href="?target=pulltab"><span class="mi-icon">🎰</span>Pull Tab</a>
 </div>
 
-<h1>&#127920; PULL TABS</h1>
+<h1>&#127920; PULL TAB EMULATOR</h1>
 <p class="subtitle">Choose your game &bull; $1 per tab</p>
 <div id="selection-screen">
   <div class="pick-label">&#8212; SELECT A PULL TAB GAME &#8212;</div>
@@ -231,8 +231,30 @@ document.addEventListener('click', function(e) {
   document.body.appendChild(wrap);
 
   window.addEventListener('DOMContentLoaded', function() {
-    var card = document.getElementById('tab-card');
-    if (card) wrap.appendChild(card);
+    // Try to restore saved state
+    var savedRaw = null;
+    try { savedRaw = localStorage.getItem('ptState'); } catch(e) {}
+
+    if (savedRaw) {
+      var d = JSON.parse(savedRaw);
+      if (d.currentRows && d.currentRows.length > 0) {
+        // Load state into vars
+        currentGame  = d.currentGame  || 1;
+        currentRows  = d.currentRows;
+        openedRows   = d.openedRows   || [];
+        currentWin   = d.currentWin   || 0;
+        rowsOpened   = d.rowsOpened   || 0;
+        statsPlayed  = d.statsPlayed  || 0;
+        statsWon     = d.statsWon     || 0;
+        // Show the card with last tab state
+        applyGameVisuals(currentGame);
+        var card = document.getElementById('tab-card');
+        if (card) wrap.appendChild(card);
+        renderGrid();
+        return;
+      }
+    }
+    // No previous tab — show nothing (empty dark screen)
   });
 })();
 
