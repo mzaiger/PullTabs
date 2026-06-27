@@ -52,9 +52,44 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
 .payout-legend h3 { color: #ffd700; font-size: 0.8rem; margin-bottom: 6px; text-align: center; }
 .payout-row-leg { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #2a2a4a; }
 .payout-row-leg:last-child { border-bottom: none; }
+
+/* ===== MENU ===== */
+.menu-btn {
+  position: fixed; top: 12px; right: 14px; z-index: 1000;
+  background: #b8860b; border: 2px solid #ffd700; border-radius: 6px;
+  color: #fff; width: 42px; height: 42px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; cursor: pointer; box-shadow: 0 0 12px rgba(255,215,0,0.4);
+}
+.menu-btn span { display: block; width: 22px; height: 3px; background: #fff; border-radius: 2px; }
+.menu-dropdown {
+  position: fixed; top: 60px; right: 14px; z-index: 1000;
+  background: #1a1a2e; border: 2px solid #ffd700; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.8); display: none;
+}
+.menu-dropdown.open { display: block; }
+.menu-item {
+  display: block; padding: 12px 20px; color: #ffd700;
+  font-size: 13px; font-weight: 900; letter-spacing: 2px;
+  text-transform: uppercase; text-decoration: none; cursor: pointer;
+  white-space: nowrap; border-bottom: 1px solid #333;
+  transition: background 0.15s, color 0.15s; font-family: Arial, sans-serif;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:hover { background: #b8860b; color: #fff; }
+.menu-item .mi-icon { margin-right: 8px; }
 </style>
 </head>
 <body>
+
+<!-- Hamburger Menu -->
+<div class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+  <span></span><span></span><span></span>
+</div>
+<div class="menu-dropdown" id="menuDropdown">
+  <a class="menu-item" href="?target=pulltab"><span class="mi-icon">🎰</span>Pull Tab</a>
+</div>
+
 <h1>&#127920; PULL TAB EMULATOR</h1>
 <p class="subtitle">Choose your game &bull; $1 per tab</p>
 <div id="selection-screen">
@@ -88,7 +123,7 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
     <div id="result-display" class="result-banner pending">Pull rows to play</div>
     <button id="new-tab-btn" onclick="newTab()">New Tab &#127903;</button>
   </div>
-  <div class="pull-tab-card" id="tab-card">
+  <div class="pull-tab-card" id="tab-card" data-target="pulltab">
     <img class="base-image" id="base-img" src="" alt="Pull Tab" style="display:block;">
     <div id="pt3-logo-wrap" style="display:none; padding:0;">
       <img id="pt3-logo-img" src="" style="width:100%;display:block;">
@@ -128,20 +163,90 @@ var currentGame = 1;
 var statsPlayed = 0, statsWon = 0, currentWin = 0, rowsOpened = 0;
 var currentRows = [];
 var TOTAL_ROWS = 7;
+// Track which rows are opened (for save/restore)
+var openedRows = [];
 
+// ===== STATE PERSISTENCE =====
+function saveState() {
+  try {
+    localStorage.setItem('ptState', JSON.stringify({
+      currentGame: currentGame,
+      currentRows: currentRows,
+      openedRows: openedRows,
+      currentWin: currentWin,
+      rowsOpened: rowsOpened,
+      statsPlayed: statsPlayed,
+      statsWon: statsWon,
+      screenOpen: document.getElementById('game-screen').style.display !== 'none'
+    }));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    var s = localStorage.getItem('ptState');
+    if (!s) return false;
+    var d = JSON.parse(s);
+    currentGame   = d.currentGame   || 1;
+    currentRows   = d.currentRows   || [];
+    openedRows    = d.openedRows    || [];
+    currentWin    = d.currentWin    || 0;
+    rowsOpened    = d.rowsOpened    || 0;
+    statsPlayed   = d.statsPlayed   || 0;
+    statsWon      = d.statsWon      || 0;
+    return !!d.screenOpen;
+  } catch(e) { return false; }
+}
+
+// ===== MENU =====
+function toggleMenu() {
+  document.getElementById('menuDropdown').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var btn = document.getElementById('menuBtn');
+  var dd  = document.getElementById('menuDropdown');
+  if (btn && dd && !btn.contains(e.target) && !dd.contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
+
+// ===== ISOLATED VIEW (?target=pulltab) =====
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var target = params.get('target');
+  if (target !== 'pulltab') return;
+
+  var style = document.createElement('style');
+  style.textContent = [
+    'body > * { display: none !important; }',
+    'body { display:flex; align-items:center; justify-content:center;',
+    '        padding:0; min-height:100vh; background:#1a1a2e; }',
+    '#isolated-view { display:flex !important; align-items:center;',
+    '                 justify-content:center; width:100vw; min-height:100vh; }'
+  ].join('');
+  document.head.appendChild(style);
+
+  var wrap = document.createElement('div');
+  wrap.id = 'isolated-view';
+  document.body.appendChild(wrap);
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var card = document.getElementById('tab-card');
+    if (card) wrap.appendChild(card);
+  });
+})();
+
+// ===== GAME LOGIC =====
 function goBack() {
   document.getElementById('selection-screen').style.display = 'flex';
   document.getElementById('game-screen').style.display = 'none';
+  saveState();
 }
 
-function startGame(n) {
-  currentGame = n;
-  document.getElementById('selection-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'flex';
-
+function applyGameVisuals(n) {
   var baseImg = document.getElementById('base-img');
   var pt3wrap = document.getElementById('pt3-logo-wrap');
-  var card = document.getElementById('tab-card');
+  var card    = document.getElementById('tab-card');
   var overlay = document.getElementById('grid-overlay');
 
   baseImg.style.display = 'block';
@@ -150,28 +255,35 @@ function startGame(n) {
   card.className = 'pull-tab-card';
   overlay.className = 'grid-overlay';
   overlay.style.position = 'absolute';
-  // Position grid to start just below the logo area
   var logoTops = {1: 198, 2: 181, 3: 188, 4: 204};
   overlay.style.top = (logoTops[n] || 190) + 'px';
   overlay.style.bottom = '4px';
 
-  // Update legend
   var legendRows = document.getElementById('legend-rows');
-  legendRows.innerHTML = '';
-  var labels = GAME_PRIZE_LABELS[String(n)];
-  var prizes = ['$500','$100','$20','$10','$5','$2','$1'];
-  for (var i = 0; i < 7; i++) {
-    var d = document.createElement('div');
-    d.className = 'payout-row-leg';
-    d.innerHTML = '<span>' + labels[i] + '</span><span style="color:#ffd700">' + prizes[i] + '</span>';
-    legendRows.appendChild(d);
+  if (legendRows) {
+    legendRows.innerHTML = '';
+    var labels = GAME_PRIZE_LABELS[String(n)];
+    var prizes = ['$500','$100','$20','$10','$5','$2','$1'];
+    for (var i = 0; i < 7; i++) {
+      var d = document.createElement('div');
+      d.className = 'payout-row-leg';
+      d.innerHTML = '<span>' + labels[i] + '</span><span style="color:#ffd700">' + prizes[i] + '</span>';
+      legendRows.appendChild(d);
+    }
   }
+}
 
+function startGame(n) {
+  currentGame = n;
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  applyGameVisuals(n);
   generateTab();
 }
 
 function generateTab() {
   rowsOpened = 0;
+  openedRows = [];
   currentWin = 0;
   currentRows = [];
   for (var i = 0; i < TOTAL_ROWS; i++) currentRows.push({symbols:[0,0,0], isWin:false, prize:0});
@@ -200,6 +312,7 @@ function generateTab() {
   currentWin = currentRows.reduce(function(s,r){return s+r.prize;}, 0);
   renderGrid();
   updateResult(false);
+  saveState();
 }
 
 function renderGrid() {
@@ -237,6 +350,17 @@ function renderGrid() {
     rowDiv.appendChild(cover);
     overlay.appendChild(rowDiv);
   }
+
+  // Restore opened rows from saved state
+  for (var i = 0; i < openedRows.length; i++) {
+    var rr = openedRows[i];
+    var cover2 = document.getElementById('cover-' + rr);
+    if (cover2) cover2.classList.add('removed');
+    if (currentRows[rr].isWin) {
+      var winline = document.getElementById('winline-' + rr);
+      if (winline) winline.style.display = 'block';
+    }
+  }
 }
 
 function openRow(r) {
@@ -244,12 +368,13 @@ function openRow(r) {
   if (!cover || cover.classList.contains('removed')) return;
   cover.classList.add('removed');
   rowsOpened++;
+  openedRows.push(r);
   if (currentRows[r].isWin) {
     var line = document.getElementById('winline-' + r);
     if (line) line.style.display = 'block';
   }
   if (rowsOpened === TOTAL_ROWS) finishTab();
-  else updateResult(false);
+  else { updateResult(false); saveState(); }
 }
 
 function openAll() {
@@ -258,6 +383,7 @@ function openAll() {
     if (cover && !cover.classList.contains('removed')) {
       cover.classList.add('removed');
       rowsOpened++;
+      openedRows.push(r);
       if (currentRows[r].isWin) {
         var line = document.getElementById('winline-' + r);
         if (line) line.style.display = 'block';
@@ -274,10 +400,12 @@ function finishTab() {
   document.getElementById('stat-won').textContent = statsWon;
   document.getElementById('stat-last').textContent = currentWin > 0 ? currentWin : '&#8212;';
   updateResult(true);
+  saveState();
 }
 
 function updateResult(done) {
   var el = document.getElementById('result-display');
+  if (!el) return;
   if (!done) {
     var rem = TOTAL_ROWS - rowsOpened;
     el.className = 'result-banner pending';
@@ -294,6 +422,24 @@ function updateResult(done) {
 }
 
 function newTab() { generateTab(); }
+
+// ===== INIT: restore state on load =====
+(function() {
+  var wasOpen = loadState();
+  if (wasOpen && currentRows.length > 0) {
+    document.getElementById('selection-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'flex';
+    applyGameVisuals(currentGame);
+    renderGrid();
+    // Restore stats display
+    document.getElementById('stat-played').textContent = statsPlayed;
+    document.getElementById('stat-won').textContent = statsWon;
+    document.getElementById('stat-last').textContent = '&#8212;';
+    // Restore result banner
+    var allOpen = (rowsOpened === TOTAL_ROWS);
+    updateResult(allOpen);
+  }
+})();
 </script>
 </body>
 </html>
