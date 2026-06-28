@@ -18,11 +18,13 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
 .tab-choice .tab-num { position: absolute; top: 8px; right: 8px; background: #ffd700; color: #000; font-size: 1rem; font-weight: 900; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .tab-choice .tab-name { font-size: 0.8rem; color: #ccc; font-family: Arial, sans-serif; }
 #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
-.game-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; width: 100%; max-width: 520px; justify-content: space-between; }
-#back-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-family: Arial, sans-serif; }
-#back-btn:hover { background: #555; }
-#new-tab-btn { background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #000; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 900; letter-spacing: 1px; }
+.game-header { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 16px; width: 100%; max-width: 320px; }
+#back-btn { background: #2a2a4a; border: 2px solid #555; color: #ccc; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-family: 'Arial Black', Arial, sans-serif; font-weight: 900; }
+#back-btn:hover { background: #444; color: #fff; }
+#new-tab-btn { background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #000; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 900; letter-spacing: 1px; font-family: 'Arial Black', Arial, sans-serif; }
 #new-tab-btn:hover { transform: scale(1.05); }
+.open-all-btn-mob { background: #333; border: 2px solid #555; color: #bbb; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-family: Arial, sans-serif; }
+.open-all-btn-mob:hover { background: #555; color: #fff; }
 .result-banner { font-size: 1.2rem; font-weight: 900; text-align: center; padding: 8px 16px; border-radius: 10px; min-width: 110px; letter-spacing: 1px; }
 .result-banner.winner { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
 .result-banner.no-win { background: #333; color: #888; }
@@ -103,10 +105,9 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
 
 /* Desktop: hide the mobile-only elements inside center col */
 @media (min-width: 700px) {
-  .game-center-col .open-all-btn  { display: none !important; }
-  .game-center-col .stats-bar     { display: none !important; }
-  .game-center-col .payout-legend { display: none !important; }
-  .game-center-col .game-header   { display: none !important; }
+  .game-center-col .stats-bar      { display: none !important; }
+  .game-center-col .payout-legend  { display: none !important; }
+  .game-center-col .game-header    { display: none !important; }
 }
 
 /* Shared sidebar styles */
@@ -214,8 +215,9 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
   <!-- Mobile header (hidden on desktop) -->
   <div class="game-header">
     <button id="back-btn" onclick="goBack()">&#8592; Back</button>
-    <div id="result-display" class="result-banner pending">Pull rows to play</div>
     <button id="new-tab-btn" onclick="newTab()">New Tab &#127903;</button>
+    <button class="open-all-btn-mob" onclick="openAll()">Open All Rows</button>
+    <div id="result-display" class="result-banner pending">Pull rows to play</div>
   </div>
 
   <!-- LEFT SIDEBAR (desktop only) -->
@@ -226,7 +228,7 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
     <div class="side-stats">
       <div class="ss-row"><span>Played</span><span class="ss-val" id="stat-played-d">0</span></div>
       <div class="ss-row"><span>Total Won</span><span class="ss-val">$<span id="stat-won-d">0</span></span></div>
-      <div class="ss-row"><span>Last Win</span><span class="ss-val">$<span id="stat-last-d">&#8212;</span></span></div>
+      <div class="ss-row"><span>Last Win</span><span class="ss-val">$<span id="stat-last-d">0</span></span></div>
     </div>
   </div>
 
@@ -240,11 +242,10 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
       <div class="grid-overlay" id="grid-overlay"></div>
     </div>
     <!-- Mobile-only controls below card -->
-    <button class="open-all-btn" onclick="openAll()">Open All Rows</button>
     <div class="stats-bar">
       Tabs played: <span id="stat-played">0</span>&nbsp;&nbsp;
       Total won: $<span id="stat-won">0</span>&nbsp;&nbsp;
-      Last win: $<span id="stat-last">&#8212;</span>
+      Last win: $<span id="stat-last">0</span>
     </div>
     <div class="payout-legend">
       <h3 id="legend-title">&#127942; PRIZE TABLE (3 of a kind)</h3>
@@ -256,7 +257,7 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
   <div class="game-right-col">
     <div id="result-display-d" class="side-result pending">Pull rows to play</div>
     <div class="side-legend">
-      <h3>&#127942; PRIZE TABLE</h3>
+      <h3>&#127942; PRIZE TABLE (3 of a kind)</h3>
       <div id="legend-rows-d"></div>
     </div>
   </div>
@@ -551,11 +552,11 @@ function openAll() {
 function finishTab() {
   statsPlayed++;
   statsWon += currentWin;
-  var lastTxt = currentWin > 0 ? currentWin : '—';
+  var lastTxt = currentWin > 0 ? currentWin : '0';
   // Mobile stats
   document.getElementById('stat-played').textContent = statsPlayed;
   document.getElementById('stat-won').textContent = statsWon;
-  document.getElementById('stat-last').textContent = currentWin > 0 ? currentWin : '&#8212;';
+  document.getElementById('stat-last').textContent = lastTxt;
   // Desktop stats
   document.getElementById('stat-played-d').textContent = statsPlayed;
   document.getElementById('stat-won-d').textContent = statsWon;
@@ -595,11 +596,11 @@ function newTab() { generateTab(); }
     // Mobile stats
     document.getElementById('stat-played').textContent = statsPlayed;
     document.getElementById('stat-won').textContent = statsWon;
-    document.getElementById('stat-last').textContent = '&#8212;';
+    document.getElementById('stat-last').textContent = '0';
     // Desktop stats
     document.getElementById('stat-played-d').textContent = statsPlayed;
     document.getElementById('stat-won-d').textContent = statsWon;
-    document.getElementById('stat-last-d').textContent = '—';
+    document.getElementById('stat-last-d').textContent = '0';
     var allOpen = (rowsOpened === TOTAL_ROWS);
     updateResult(allOpen);
   }
