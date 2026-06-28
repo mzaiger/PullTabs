@@ -53,7 +53,90 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
 .payout-row-leg { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #2a2a4a; }
 .payout-row-leg:last-child { border-bottom: none; }
 
-/* ===== MENU ===== */
+/* ===== DESKTOP 3-COLUMN LAYOUT ===== */
+@media (min-width: 700px) {
+  #game-screen {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 28px !important;
+    width: 100% !important;
+  }
+  .game-left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    min-width: 160px;
+    max-width: 180px;
+    padding-top: 8px;
+  }
+  .game-center-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .game-right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    min-width: 180px;
+    max-width: 220px;
+    padding-top: 8px;
+  }
+  /* Hide the old stacked header/footer elements on desktop */
+  .game-header   { display: none !important; }
+  .open-all-btn  { display: none !important; }
+  .stats-bar     { display: none !important; }
+  .payout-legend { display: none !important; }
+  /* Desktop sidebar versions are shown via the column divs */
+}
+
+/* Mobile: columns hidden, original layout used */
+@media (max-width: 699px) {
+  .game-left-col, .game-right-col, .game-center-col { display: contents; }
+}
+
+/* Shared sidebar styles */
+.side-btn {
+  width: 100%; padding: 10px 14px; border-radius: 8px; cursor: pointer;
+  font-size: 0.95rem; font-weight: 900; letter-spacing: 1px;
+  border: 2px solid #555; font-family: 'Arial Black', Arial, sans-serif;
+  text-align: center; transition: all 0.15s;
+}
+.side-btn-back { background: #2a2a4a; color: #ccc; border-color: #555; }
+.side-btn-back:hover { background: #444; color: #fff; }
+.side-btn-new  { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; }
+.side-btn-new:hover { transform: scale(1.04); }
+.side-btn-open { background: #333; color: #bbb; border-color: #555; }
+.side-btn-open:hover { background: #555; color: #fff; }
+
+.side-stats {
+  background: #1e1e35; border: 1px solid #444; border-radius: 10px;
+  padding: 12px 14px; font-family: Arial, sans-serif; font-size: 0.8rem; color: #aaa;
+}
+.side-stats .ss-row { display: flex; justify-content: space-between; padding: 3px 0;
+  border-bottom: 1px solid #2a2a4a; }
+.side-stats .ss-row:last-child { border-bottom: none; }
+.side-stats .ss-val { color: #ffd700; font-weight: bold; }
+
+.side-result {
+  font-size: 1.3rem; font-weight: 900; text-align: center;
+  padding: 14px 10px; border-radius: 10px; letter-spacing: 1px;
+}
+.side-result.winner { background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
+.side-result.no-win { background: #333; color: #888; }
+.side-result.pending { background: #2a2a4a; color: #aaa; font-size: 0.9rem; }
+
+.side-legend {
+  background: #1e1e35; border: 1px solid #444; border-radius: 10px;
+  padding: 10px 14px; font-family: Arial, sans-serif; font-size: 0.75rem; color: #bbb;
+}
+.side-legend h3 { color: #ffd700; font-size: 0.8rem; margin-bottom: 6px; text-align: center; }
+
 .menu-btn {
   position: fixed; top: 12px; right: 14px; z-index: 1000;
   background: #b8860b; border: 2px solid #ffd700; border-radius: 6px;
@@ -118,27 +201,54 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
   </div>
 </div>
 <div id="game-screen">
+  <!-- Mobile header (hidden on desktop) -->
   <div class="game-header">
     <button id="back-btn" onclick="goBack()">&#8592; Back</button>
     <div id="result-display" class="result-banner pending">Pull rows to play</div>
     <button id="new-tab-btn" onclick="newTab()">New Tab &#127903;</button>
   </div>
-  <div class="pull-tab-card" id="tab-card" data-target="pulltab">
-    <img class="base-image" id="base-img" src="" alt="Pull Tab" style="display:block;">
-    <div id="pt3-logo-wrap" style="display:none; padding:0;">
-      <img id="pt3-logo-img" src="" style="width:100%;display:block;">
+
+  <!-- LEFT SIDEBAR (desktop only) -->
+  <div class="game-left-col">
+    <button class="side-btn side-btn-back" onclick="goBack()">&#8592; Back</button>
+    <button class="side-btn side-btn-new"  onclick="newTab()">New Tab &#127903;</button>
+    <button class="side-btn side-btn-open" onclick="openAll()">Open All</button>
+    <div class="side-stats">
+      <div class="ss-row"><span>Played</span><span class="ss-val" id="stat-played-d">0</span></div>
+      <div class="ss-row"><span>Total Won</span><span class="ss-val">$<span id="stat-won-d">0</span></span></div>
+      <div class="ss-row"><span>Last Win</span><span class="ss-val">$<span id="stat-last-d">&#8212;</span></span></div>
     </div>
-    <div class="grid-overlay" id="grid-overlay"></div>
   </div>
-  <button class="open-all-btn" onclick="openAll()">Open All Rows</button>
-  <div class="stats-bar">
-    Tabs played: <span id="stat-played">0</span>&nbsp;&nbsp;
-    Total won: $<span id="stat-won">0</span>&nbsp;&nbsp;
-    Last win: $<span id="stat-last">&#8212;</span>
+
+  <!-- CENTER: the card -->
+  <div class="game-center-col">
+    <div class="pull-tab-card" id="tab-card" data-target="pulltab">
+      <img class="base-image" id="base-img" src="" alt="Pull Tab" style="display:block;">
+      <div id="pt3-logo-wrap" style="display:none; padding:0;">
+        <img id="pt3-logo-img" src="" style="width:100%;display:block;">
+      </div>
+      <div class="grid-overlay" id="grid-overlay"></div>
+    </div>
+    <!-- Mobile-only controls below card -->
+    <button class="open-all-btn" onclick="openAll()">Open All Rows</button>
+    <div class="stats-bar">
+      Tabs played: <span id="stat-played">0</span>&nbsp;&nbsp;
+      Total won: $<span id="stat-won">0</span>&nbsp;&nbsp;
+      Last win: $<span id="stat-last">&#8212;</span>
+    </div>
+    <div class="payout-legend">
+      <h3 id="legend-title">&#127942; PRIZE TABLE (3 of a kind)</h3>
+      <div id="legend-rows"></div>
+    </div>
   </div>
-  <div class="payout-legend">
-    <h3 id="legend-title">&#127942; PRIZE TABLE (3 of a kind)</h3>
-    <div id="legend-rows"></div>
+
+  <!-- RIGHT SIDEBAR (desktop only) -->
+  <div class="game-right-col">
+    <div id="result-display-d" class="side-result pending">Pull rows to play</div>
+    <div class="side-legend">
+      <h3>&#127942; PRIZE TABLE</h3>
+      <div id="legend-rows-d"></div>
+    </div>
   </div>
 </div>
 <script>
@@ -281,16 +391,29 @@ function applyGameVisuals(n) {
   overlay.style.top = (logoTops[n] || 190) + 'px';
   overlay.style.bottom = '4px';
 
+  var labels = GAME_PRIZE_LABELS[String(n)];
+  var prizes = ['$500','$100','$20','$10','$5','$2','$1'];
+
+  // Mobile legend
   var legendRows = document.getElementById('legend-rows');
   if (legendRows) {
     legendRows.innerHTML = '';
-    var labels = GAME_PRIZE_LABELS[String(n)];
-    var prizes = ['$500','$100','$20','$10','$5','$2','$1'];
     for (var i = 0; i < 7; i++) {
       var d = document.createElement('div');
       d.className = 'payout-row-leg';
       d.innerHTML = '<span>' + labels[i] + '</span><span style="color:#ffd700">' + prizes[i] + '</span>';
       legendRows.appendChild(d);
+    }
+  }
+  // Desktop legend
+  var legendRowsD = document.getElementById('legend-rows-d');
+  if (legendRowsD) {
+    legendRowsD.innerHTML = '';
+    for (var j = 0; j < 7; j++) {
+      var d2 = document.createElement('div');
+      d2.className = 'payout-row-leg';
+      d2.innerHTML = '<span>' + labels[j] + '</span><span style="color:#ffd700">' + prizes[j] + '</span>';
+      legendRowsD.appendChild(d2);
     }
   }
 }
@@ -418,29 +541,35 @@ function openAll() {
 function finishTab() {
   statsPlayed++;
   statsWon += currentWin;
+  var lastTxt = currentWin > 0 ? currentWin : '—';
+  // Mobile stats
   document.getElementById('stat-played').textContent = statsPlayed;
   document.getElementById('stat-won').textContent = statsWon;
   document.getElementById('stat-last').textContent = currentWin > 0 ? currentWin : '&#8212;';
+  // Desktop stats
+  document.getElementById('stat-played-d').textContent = statsPlayed;
+  document.getElementById('stat-won-d').textContent = statsWon;
+  document.getElementById('stat-last-d').textContent = lastTxt;
   updateResult(true);
   saveState();
 }
 
 function updateResult(done) {
-  var el = document.getElementById('result-display');
-  if (!el) return;
+  var cls, txt;
   if (!done) {
     var rem = TOTAL_ROWS - rowsOpened;
-    el.className = 'result-banner pending';
-    el.textContent = rem + ' rows left';
+    cls = 'pending';
+    txt = rem + ' rows left';
   } else {
-    if (currentWin > 0) {
-      el.className = 'result-banner winner';
-      el.textContent = 'WIN $' + currentWin + '!';
-    } else {
-      el.className = 'result-banner no-win';
-      el.textContent = 'No Winner';
-    }
+    if (currentWin > 0) { cls = 'winner'; txt = 'WIN $' + currentWin + '!'; }
+    else                 { cls = 'no-win'; txt = 'No Winner'; }
   }
+  // Mobile banner
+  var el = document.getElementById('result-display');
+  if (el) { el.className = 'result-banner ' + cls; el.textContent = txt; }
+  // Desktop sidebar banner
+  var eld = document.getElementById('result-display-d');
+  if (eld) { eld.className = 'side-result ' + cls; eld.textContent = txt; }
 }
 
 function newTab() { generateTab(); }
@@ -453,11 +582,14 @@ function newTab() { generateTab(); }
     document.getElementById('game-screen').style.display = 'flex';
     applyGameVisuals(currentGame);
     renderGrid();
-    // Restore stats display
+    // Mobile stats
     document.getElementById('stat-played').textContent = statsPlayed;
     document.getElementById('stat-won').textContent = statsWon;
     document.getElementById('stat-last').textContent = '&#8212;';
-    // Restore result banner
+    // Desktop stats
+    document.getElementById('stat-played-d').textContent = statsPlayed;
+    document.getElementById('stat-won-d').textContent = statsWon;
+    document.getElementById('stat-last-d').textContent = '—';
     var allOpen = (rowsOpened === TOTAL_ROWS);
     updateResult(allOpen);
   }
