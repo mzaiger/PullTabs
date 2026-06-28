@@ -17,83 +17,40 @@
     overflow-x: hidden;
   }
 
-  .wallet-hud {
-    width: 100%;
-    background: #0e0c00;
-    border-bottom: 2px solid #ffd700;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 16px;
-    gap: 12px;
-    flex-wrap: wrap;
-    box-shadow: 0 2px 16px rgba(255,215,0,0.12);
-    position: sticky;
-    top: 0;
-    z-index: 200;
-  }
-  .hud-balance {
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 18px;
-    font-weight: 900;
-    color: #ffd700;
-    text-shadow: 0 0 8px #ffd70066;
-    letter-spacing: 1px;
-  }
-  .hud-balance .hud-label {
-    font-size: 9px;
-    color: #554400;
-    letter-spacing: 2px;
-    font-weight: normal;
-    display: block;
-    margin-bottom: 1px;
-  }
-  .hud-actions { display: flex; gap: 8px; align-items: center; }
-  .hud-btn {
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 7px 14px;
-    border-radius: 6px;
-    border: 2px solid;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform 0.15s, filter 0.15s;
-    background: none;
-  }
-  .hud-btn:hover { transform: scale(1.06); filter: brightness(1.15); }
-  .btn-wallet { background: #0a0a00; border-color: #ffd700; color: #ffd700; }
-  .btn-play   { background: #332200; border-color: #ff8c00; color: #ff8c00; }
-  .btn-play:disabled {
-    background: #1a1100; border-color: #443300; color: #665522;
-    cursor: not-allowed; transform: none; filter: none;
-  }
-
-  .hud-toast {
+  /* ── CENTER POPUP ── */
+  .center-popup {
+    display: none;
     position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-120%);
+    inset: 0;
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .center-popup.show { display: flex; }
+  .center-popup-inner {
     background: #0e0c00;
-    border: 2px solid #ffd700;
-    border-radius: 10px;
-    padding: 12px 24px;
+    border: 3px solid #ffd700;
+    border-radius: 18px;
+    padding: 28px 48px;
     font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 13px;
+    font-size: 22px;
     font-weight: 900;
     color: #ffd700;
-    z-index: 999;
-    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    box-shadow: 0 4px 30px rgba(0,0,0,0.8);
     text-align: center;
-    max-width: 90vw;
+    box-shadow: 0 0 60px rgba(255,215,0,0.35), 0 8px 40px rgba(0,0,0,0.9);
+    animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    max-width: 80vw;
+    line-height: 1.4;
   }
-  .hud-toast.show { transform: translateX(-50%) translateY(0); }
-  .hud-toast.win  { border-color: #00ff88; color: #00ff88; }
-  .hud-toast.lose { border-color: #ff3344; color: #ff3344; }
+  .center-popup.win .center-popup-inner  { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 60px rgba(0,255,136,0.35), 0 8px 40px rgba(0,0,0,0.9); }
+  .center-popup.lose .center-popup-inner { border-color: #ff3344; color: #ff3344; box-shadow: 0 0 60px rgba(255,51,68,0.35), 0 8px 40px rgba(0,0,0,0.9); }
+  @keyframes popIn {
+    from { transform: scale(0.6); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
 
+  /* ── BLOCKED OVERLAY ── */
   .blocked-overlay {
     display: none;
     position: fixed;
@@ -137,10 +94,11 @@
   }
   .btn-go-wallet:hover { transform: scale(1.05); }
 
+  /* ── GAME IFRAME ── */
   .game-wrap { width: 100%; flex: 1; }
   .game-wrap iframe {
     width: 100%;
-    height: calc(100vh - 56px);
+    height: 100vh;
     border: none;
     display: block;
     background: #1a1a2e;
@@ -149,19 +107,12 @@
 </head>
 <body>
 
-<div class="wallet-hud">
-  <div class="hud-balance">
-    <span class="hud-label">WALLET</span>
-    $<span id="hudAmt">0</span>.00
-  </div>
-  <div class="hud-actions">
-    <a class="hud-btn btn-wallet" href="../wallet/index.html">← WALLET</a>
-    <button class="hud-btn btn-play" id="btnPullPlay" onclick="spendAndNew()">🎟️ NEW TAB ($1)</button>
-  </div>
+<!-- CENTER POPUP -->
+<div class="center-popup" id="centerPopup">
+  <div class="center-popup-inner" id="centerPopupMsg"></div>
 </div>
 
-<div class="hud-toast" id="hudToast"></div>
-
+<!-- BLOCKED OVERLAY -->
 <div class="blocked-overlay" id="blockedOverlay">
   <div style="font-size:48px">⛔</div>
   <div class="bo-msg">OUT OF CREDITS</div>
@@ -169,6 +120,7 @@
   <a class="btn-go-wallet" href="../wallet/index.html">GO TO WALLET</a>
 </div>
 
+<!-- THE GAME -->
 <div class="game-wrap">
   <iframe id="pullFrame" src="PullTabs.html" title="Pull Tabs" allowtransparency="true"></iframe>
 </div>
@@ -187,130 +139,92 @@ function setBalance(val) {
   return clamped;
 }
 
-let _toastTmr;
-function toast(msg, type) {
-  const t = document.getElementById('hudToast');
-  t.textContent = msg;
-  t.className = 'hud-toast show ' + (type || '');
-  clearTimeout(_toastTmr);
-  _toastTmr = setTimeout(() => t.classList.remove('show'), 4000);
+let _popTmr;
+function popup(msg, type) {
+  const el = document.getElementById('centerPopup');
+  const msgEl = document.getElementById('centerPopupMsg');
+  msgEl.textContent = msg;
+  el.className = 'center-popup show ' + (type || '');
+  clearTimeout(_popTmr);
+  _popTmr = setTimeout(() => el.classList.remove('show'), 3500);
 }
 
 function renderHud() {
   const bal = getBalance();
-  document.getElementById('hudAmt').textContent = bal.toFixed(0);
-  const btn = document.getElementById('btnPullPlay');
-  if (bal <= 0) {
-    btn.disabled = true;
-    document.getElementById('blockedOverlay').classList.add('show');
-  } else {
-    btn.disabled = false;
-    document.getElementById('blockedOverlay').classList.remove('show');
-  }
-}
-
-// ─── SPEND $1 AND GENERATE A NEW TAB ─────────────────────────────────────────
-// This is the ONLY place a charge happens. It sets a flag the patch reads.
-function spendAndNew() {
-  const bal = getBalance();
-  if (bal <= 0) { renderHud(); return; }
-
-  try {
-    const fw = document.getElementById('pullFrame').contentWindow;
-    // Tell the patch that this generateTab call is pre-paid from outside
-    fw._walletPrepaid = true;
-    const newBal = setBalance(bal - 1);
-    renderHud();
-    toast('-$1.00 · Balance: $' + newBal, '');
-    if (typeof fw.generateTab === 'function') fw.generateTab();
-    else if (typeof fw.newTab === 'function') fw.newTab();
-  } catch(e) {
-    const newBal = setBalance(bal - 1);
-    renderHud();
-    toast('-$1.00 · Balance: $' + newBal, '');
-  }
+  const blocked = document.getElementById('blockedOverlay');
+  if (bal <= 0) blocked.classList.add('show');
+  else blocked.classList.remove('show');
 }
 
 // ─── PATCH IFRAME ONCE ON LOAD ────────────────────────────────────────────────
 document.getElementById('pullFrame').addEventListener('load', function() {
   try {
     const fw = this.contentWindow;
-
-    // Small delay so the iframe's own scripts finish executing
-    setTimeout(function() {
-      patchIframe(fw);
-    }, 250);
-  } catch(e) {
-    console.warn('[Wallet] iframe load error:', e);
-  }
+    setTimeout(function() { patchIframe(fw); }, 250);
+  } catch(e) {}
 });
 
 function patchIframe(fw) {
   try {
-    // ── CHARGE PATCH: only on generateTab (newTab just calls generateTab) ──
-    // We patch generateTab to require either:
-    //   (a) _walletPrepaid flag set by our spendAndNew() above, OR
-    //   (b) the player clicked the in-game "New Tab" button (which means
-    //       the game screen was already open and they chose to buy another)
-    //
-    // We do NOT re-patch if already patched.
+    // ── CHARGE PATCH on generateTab ───────────────────────────────────────────
     if (typeof fw.generateTab === 'function' && !fw._walletPatched) {
       const origGenerate = fw.generateTab;
 
       fw.generateTab = function() {
-        // If we pre-paid from the HUD button, consume the flag and proceed free
         if (fw._walletPrepaid) {
           fw._walletPrepaid = false;
           origGenerate.call(fw);
           return;
         }
-
-        // Otherwise this is an in-game triggered call (New Tab button).
-        // Charge $1 here.
         const bal = getBalance();
-        if (bal <= 0) {
-          renderHud();
-          return;  // block the tab from generating
-        }
+        if (bal <= 0) { renderHud(); return; }
         const newBal = setBalance(bal - 1);
         renderHud();
-        toast('-$1.00 · Balance: $' + newBal, '');
+        popup('-$1.00  ·  Balance: $' + newBal, '');
         origGenerate.call(fw);
       };
 
       fw._walletPatched = true;
-      console.log('[Wallet] generateTab patched');
     }
 
-    // ── WIN PATCH: patch finishTab to credit winnings ──────────────────────
-    // finishTab() is called exactly once per completed tab (by openRow when
-    // all rows are revealed, or by openAll). It's the single authoritative
-    // completion point. We track by statsPlayed to avoid double-crediting.
+    // ── WIN PATCH on finishTab ─────────────────────────────────────────────────
+    // Guard: once finishTab fires for a given statsPlayed count, never credit again.
+    // This prevents "Open All" repeated-click double-pays.
     if (typeof fw.finishTab === 'function' && !fw._walletWinPatched) {
       const origFinish = fw.finishTab;
 
       fw.finishTab = function() {
-        origFinish.call(fw);  // let the game update statsPlayed and currentWin first
+        // If already finished this tab, do nothing
+        if (fw._tabFinished) return;
+        fw._tabFinished = true;
 
-        // Now read the final values
+        origFinish.call(fw);
+
         const prize = fw.currentWin;
         const playCount = fw.statsPlayed;
 
-        // Guard: only credit if this play count hasn't been credited yet
         if (playCount === fw._lastCreditedPlay) return;
         fw._lastCreditedPlay = playCount;
 
         if (prize > 0) {
           const newBal = setBalance(getBalance() + prize);
           renderHud();
-          toast('🎉 Pull Tab WIN $' + prize + '! Balance: $' + newBal, 'win');
-          console.log('[Wallet] Win credited: $' + prize + ' → $' + newBal);
+          popup('🎉  Pull Tab WIN  $' + prize + '!\nBalance: $' + newBal, 'win');
         }
       };
 
+      // Also patch generateTab to reset _tabFinished for each new tab
+      if (fw._walletPatched) {
+        const alreadyPatched = fw.generateTab;
+        fw.generateTab = function() {
+          fw._tabFinished = false;
+          alreadyPatched.call(fw);
+        };
+      }
+
       fw._walletWinPatched = true;
-      fw._lastCreditedPlay = fw.statsPlayed || 0;  // don't credit any already-finished tab on load
-      console.log('[Wallet] finishTab patched');
+      fw._lastCreditedPlay = fw.statsPlayed || 0;
+      fw._tabFinished = false;
     }
 
   } catch(e) {
