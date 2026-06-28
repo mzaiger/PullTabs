@@ -120,10 +120,7 @@
 </div>
 
 <script>
-const WALLET_KEY    = 'arcade_wallet';
-// Persistent set of statsPlayed counts that have already been credited.
-// Stored as a JSON array in localStorage so it survives page reloads.
-const CREDITED_KEY  = 'pulltab_credited_plays';
+const WALLET_KEY = 'arcade_wallet';
 
 function getBalance() {
   const v = localStorage.getItem(WALLET_KEY);
@@ -134,22 +131,6 @@ function setBalance(val) {
   const clamped = Math.max(0, Math.round(val * 100) / 100);
   localStorage.setItem(WALLET_KEY, String(clamped));
   return clamped;
-}
-
-// ── Credited-play tracking (persists across reloads) ─────────────────────────
-function getCreditedPlays() {
-  try { return new Set(JSON.parse(localStorage.getItem(CREDITED_KEY)) || []); }
-  catch(e) { return new Set(); }
-}
-function markCredited(playCount) {
-  const s = getCreditedPlays();
-  s.add(playCount);
-  // Keep only the last 50 to avoid unbounded growth
-  const arr = [...s].slice(-50);
-  localStorage.setItem(CREDITED_KEY, JSON.stringify(arr));
-}
-function alreadyCredited(playCount) {
-  return getCreditedPlays().has(playCount);
 }
 
 let _popTmr;
@@ -164,68 +145,67 @@ function popup(msg, type) {
 
 function renderHud() {
   const bal = getBalance();
-  const blocked = document.getElementById('blockedOverlay');
-  if (bal <= 0) blocked.classList.add('show');
-  else blocked.classList.remove('show');
+  if (bal <= 0) document.getElementById('blockedOverlay').classList.add('show');
+  else document.getElementById('blockedOverlay').classList.remove('show');
 }
+
+// ── Was there already an open tab when the page loaded? ──────────────────────
+// Read ptState BEFORE the iframe loads and can modify it.
+// ptState.screenOpen === true means a tab was already open from a previous visit.
+function wasTabAlreadyOpen() {
+  try {
+    const s = localStorage.getItem('ptState');
+    if (!s) return false;
+    const d = JSON.parse(s);
+    return !!d.screenOpen;
+  } catch(e) { return false; }
+}
+
+// Check this once right now, before the iframe even loads.
+const TAB_WAS_PRELOADED = wasTabAlreadyOpen();
 
 function patchIframe(fw) {
   try {
-    // ── CHARGE PATCH on generateTab ───────────────────────────────────────────
+    // ── SESSION FLAG: did we generate a new tab this session? ────────────────
+    // This is the single source of truth for whether finishTab should pay.
+    // It starts false. generateTab sets it true. finishTab resets it to false.
+    // If the user returns to a pre-existing open tab and hits Open All,
+    // this flag is false → no payout.
+    fw._tabPaidThisSession = false;
+
+    // ── CHARGE PATCH on generateTab ──────────────────────────────────────────
     if (typeof fw.generateTab === 'function' && !fw._walletPatched) {
       const origGenerate = fw.generateTab;
       fw.generateTab = function() {
-        if (fw._walletPrepaid) {
-          fw._walletPrepaid = false;
-          origGenerate.call(fw);
-          return;
-        }
         const bal = getBalance();
         if (bal <= 0) { renderHud(); return; }
         const newBal = setBalance(bal - 1);
         renderHud();
         popup('-$1.00  ·  Balance: $' + newBal, '');
+        fw._tabPaidThisSession = true; // mark: this tab was bought in this session
         origGenerate.call(fw);
       };
       fw._walletPatched = true;
     }
 
     // ── WIN PATCH on finishTab ────────────────────────────────────────────────
-    // We key credits by statsPlayed stored in localStorage (persists across
-    // reloads). If this play count was already credited in a previous session,
-    // we skip — so returning to a finished winning tab never double-pays.
     if (typeof fw.finishTab === 'function' && !fw._walletWinPatched) {
       const origFinish = fw.finishTab;
       fw.finishTab = function() {
-        origFinish.call(fw); // let game update statsPlayed + currentWin first
+        const wasPaid = fw._tabPaidThisSession;
+        fw._tabPaidThisSession = false; // reset — next tab needs its own purchase
+        origFinish.call(fw); // let game update statsPlayed + currentWin
 
-        const prize     = fw.currentWin;
-        const playCount = fw.statsPlayed;
+        // Only credit if we actually paid for this tab in this session
+        if (!wasPaid) return;
 
-        // Guard 1: already credited this play in a previous or current session
-        if (alreadyCredited(playCount)) return;
-
-        // Guard 2: no prize
-        if (!prize || prize <= 0) {
-          // Still mark as credited so repeated Open All clicks don't re-check
-          markCredited(playCount);
-          return;
+        const prize = fw.currentWin;
+        if (prize > 0) {
+          const newBal = setBalance(getBalance() + prize);
+          renderHud();
+          popup('🎉  Pull Tab WIN  $' + prize + '!\nBalance: $' + newBal, 'win');
         }
-
-        // Credit the win
-        markCredited(playCount);
-        const newBal = setBalance(getBalance() + prize);
-        renderHud();
-        popup('🎉  Pull Tab WIN  $' + prize + '!\nBalance: $' + newBal, 'win');
       };
-
-      // Pre-mark the current statsPlayed as already credited on load.
-      // This is the key fix: if the page reloads with a finished tab on screen,
-      // whatever statsPlayed count the game has right now is treated as
-      // already settled — so Open All on it won't pay out again.
-      const currentPlay = fw.statsPlayed || 0;
-      markCredited(currentPlay);
-
       fw._walletWinPatched = true;
     }
 
