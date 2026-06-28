@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pull Tabs</title>
+<title>Pull Tab Emulator</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #1a1a2e; font-family: 'Arial Black', Impact, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; color: #fff; }
@@ -94,9 +94,19 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
   /* Desktop sidebar versions are shown via the column divs */
 }
 
-/* Mobile: columns hidden, original layout used */
+/* Mobile: hide sidebar cols entirely, show original stacked elements */
 @media (max-width: 699px) {
-  .game-left-col, .game-right-col, .game-center-col { display: contents; }
+  .game-left-col  { display: none !important; }
+  .game-right-col { display: none !important; }
+  .game-center-col { display: contents; }
+}
+
+/* Desktop: hide the mobile-only elements inside center col */
+@media (min-width: 700px) {
+  .game-center-col .open-all-btn  { display: none !important; }
+  .game-center-col .stats-bar     { display: none !important; }
+  .game-center-col .payout-legend { display: none !important; }
+  .game-center-col .game-header   { display: none !important; }
 }
 
 /* Shared sidebar styles */
@@ -173,7 +183,7 @@ h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bott
   <a class="menu-item" href="?target=pulltab"><span class="mi-icon">🎰</span>Pull Tab</a>
 </div>
 
-<h1>&#127920; PULL TABS</h1>
+<h1>&#127920; PULL TAB EMULATOR</h1>
 <p class="subtitle">Choose your game &bull; $1 per tab</p>
 <div id="selection-screen">
   <div class="pick-label">&#8212; SELECT A PULL TAB GAME &#8212;</div>
