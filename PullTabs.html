@@ -5,302 +5,606 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pull Tabs</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1a1a2e; font-family: 'Arial Black', Impact, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; color: #fff; }
+h1 { font-size: 2rem; color: #ffd700; text-shadow: 2px 2px 4px #000; margin-bottom: 6px; letter-spacing: 2px; }
+.subtitle { color: #aaa; font-size: 0.85rem; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: normal; }
+#selection-screen { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.pick-label { font-size: 1.1rem; color: #ffd700; margin-bottom: 16px; letter-spacing: 1px; }
+.tab-choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 600px; width: 100%; }
+.tab-choice { background: linear-gradient(145deg, #2d2d4e, #1e1e35); border: 3px solid #444; border-radius: 16px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; position: relative; overflow: hidden; }
+.tab-choice:hover { border-color: #ffd700; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(255,215,0,0.3); }
+.tab-choice img { width: 100%; max-height: 90px; object-fit: contain; border-radius: 8px; margin-bottom: 8px; }
+.tab-choice .tab-num { position: absolute; top: 8px; right: 8px; background: #ffd700; color: #000; font-size: 1rem; font-weight: 900; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.tab-choice .tab-name { font-size: 0.8rem; color: #ccc; font-family: Arial, sans-serif; }
+#game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+.game-header { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 16px; width: 100%; max-width: 320px; }
+#back-btn { background: #2a2a4a; border: 2px solid #555; color: #ccc; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-family: 'Arial Black', Arial, sans-serif; font-weight: 900; }
+#back-btn:hover { background: #444; color: #fff; }
+#new-tab-btn { background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #000; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 900; letter-spacing: 1px; font-family: 'Arial Black', Arial, sans-serif; }
+#new-tab-btn:hover { transform: scale(1.05); }
+.open-all-btn-mob { background: #333; border: 2px solid #555; color: #bbb; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-family: Arial, sans-serif; }
+.open-all-btn-mob:hover { background: #555; color: #fff; }
+.result-banner { font-size: 1.2rem; font-weight: 900; text-align: center; padding: 8px 16px; border-radius: 10px; min-width: 110px; letter-spacing: 1px; }
+.result-banner.winner { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
+.result-banner.no-win { background: #333; color: #888; }
+.result-banner.pending { background: #2a2a4a; color: #aaa; font-size: 0.85rem; }
+.pull-tab-card { position: relative; width: 300px; border-radius: 12px; overflow: visible; box-shadow: 0 8px 30px rgba(0,0,0,0.6); border: 3px solid #555; }
+.pull-tab-card .base-image { width: 100%; display: block; }
+/* For pt3 with no base image, show a themed placeholder behind the logo */
+.pt3-card { background: linear-gradient(180deg, #c9b98a 0%, #b89e6e 40%, #a8906a 100%); }
+.pt3-logo-header { width: 100%; display: block; padding: 0; }
+.grid-overlay { position: absolute; left: 0; right: 0; bottom: 4px; padding: 2px 5px 4px 5px; display: flex; flex-direction: column; gap: 2px; }
+/* For pt3, grid is not absolute but normal flow */
+.grid-inline { position: relative; left: auto; right: auto; bottom: auto; padding: 4px 5px 8px 5px; display: flex; flex-direction: column; gap: 3px; }
+.tab-row { display: flex; gap: 3px; position: relative; flex: 1; min-height: 0; }
+.sym-cell { flex: 1; background: #e8e8e8; border-radius: 3px; border: 1.5px solid #bbb; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; }
+.sym-cell img { width: 90%; height: 90%; object-fit: contain; }
+.pay-cell { width: 78px; min-width: 78px; background: #fff; border-radius: 3px; border: 1.5px solid #bbb; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; font-size: 0.6rem; font-weight: 900; color: #333; text-align: center; padding: 1px; line-height: 1.1; }
+.pay-cell.winner-pay { background: #fffae0; color: #c00; }
+.row-cover { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #c0c0c0 0%, #ececec 50%, #c0c0c0 100%); border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; border: 1.5px solid #999; z-index: 10; font-size: 0.6rem; color: #555; font-family: Arial, sans-serif; font-weight: bold; letter-spacing: 1px; user-select: none; }
+.row-cover:hover { background: linear-gradient(135deg, #aaa 0%, #ddd 50%, #aaa 100%); }
+.row-cover.removed { display: none; }
+.win-line { position: absolute; top: 50%; left: 0; right: 84px; height: 5px; background: red; border-radius: 2px; transform: translateY(-50%); z-index: 5; display: none; pointer-events: none; }
+.open-all-btn { margin-top: 10px; background: #444; border: 2px solid #666; color: #ccc; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: Arial, sans-serif; }
+.open-all-btn:hover { background: #666; color: #fff; }
+.stats-bar { margin-top: 12px; display: flex; gap: 16px; font-family: Arial, sans-serif; font-size: 0.8rem; color: #aaa; flex-wrap: wrap; justify-content: center; }
+.stats-bar span { color: #ffd700; font-weight: bold; }
+.payout-legend { margin-top: 14px; background: #1e1e35; border: 1px solid #444; border-radius: 10px; padding: 10px 16px; font-family: Arial, sans-serif; font-size: 0.75rem; color: #bbb; max-width: 300px; width: 100%; }
+.payout-legend h3 { color: #ffd700; font-size: 0.8rem; margin-bottom: 6px; text-align: center; }
+.payout-row-leg { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #2a2a4a; }
+.payout-row-leg:last-child { border-bottom: none; }
 
-  body {
-    background: #1a1a2e;
-    font-family: 'Arial', sans-serif;
-    min-height: 100vh;
+/* ===== DESKTOP 3-COLUMN LAYOUT ===== */
+@media (min-width: 700px) {
+  #game-screen {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 28px !important;
+    width: 100% !important;
+  }
+  .game-left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    min-width: 160px;
+    max-width: 180px;
+    padding-top: 8px;
+  }
+  .game-center-col {
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-x: hidden;
+    gap: 10px;
   }
-
-  /* ── WALLET HUD ── */
-  .wallet-hud {
-    width: 100%;
-    background: #0e0c00;
-    border-bottom: 2px solid #ffd700;
+  .game-right-col {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 16px;
-    gap: 12px;
-    flex-wrap: wrap;
-    box-shadow: 0 2px 16px rgba(255,215,0,0.12);
-    position: sticky;
-    top: 0;
-    z-index: 200;
-  }
-  .hud-balance {
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 18px;
-    font-weight: 900;
-    color: #ffd700;
-    text-shadow: 0 0 8px #ffd70066;
-    letter-spacing: 1px;
-  }
-  .hud-balance .hud-label {
-    font-size: 9px;
-    color: #554400;
-    letter-spacing: 2px;
-    font-weight: normal;
-    display: block;
-    margin-bottom: 1px;
-  }
-  .hud-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .hud-btn {
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 7px 14px;
-    border-radius: 6px;
-    border: 2px solid;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform 0.15s, filter 0.15s;
-    background: none;
-  }
-  .hud-btn:hover { transform: scale(1.06); filter: brightness(1.15); }
-  .btn-wallet { background: #0a0a00; border-color: #ffd700; color: #ffd700; }
-  .btn-play  { background: #332200; border-color: #ff8c00; color: #ff8c00; }
-  .btn-play:disabled {
-    background: #1a1100; border-color: #443300; color: #665522;
-    cursor: not-allowed; transform: none; filter: none;
-  }
-
-  /* ── TOAST ── */
-  .hud-toast {
-    position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-120%);
-    background: #0e0c00;
-    border: 2px solid #ffd700;
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 900;
-    color: #ffd700;
-    z-index: 999;
-    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    box-shadow: 0 4px 30px rgba(0,0,0,0.8);
-    text-align: center;
-    max-width: 90vw;
-  }
-  .hud-toast.show { transform: translateX(-50%) translateY(0); }
-  .hud-toast.win  { border-color: #00ff88; color: #00ff88; }
-  .hud-toast.lose { border-color: #ff3344; color: #ff3344; }
-
-  /* ── BLOCKED OVERLAY ── */
-  .blocked-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.88);
-    z-index: 300;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    text-align: center;
-    padding: 24px;
+    align-items: stretch;
+    gap: 14px;
+    min-width: 180px;
+    max-width: 220px;
+    padding-top: 8px;
   }
-  .blocked-overlay.show { display: flex; }
-  .blocked-overlay .bo-msg {
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 20px;
-    font-weight: 900;
-    color: #ff3344;
-    letter-spacing: 2px;
-  }
-  .blocked-overlay .bo-sub {
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-    color: #664444;
-    letter-spacing: 1px;
-  }
-  .btn-go-wallet {
-    display: inline-block;
-    background: #0a0a00;
-    border: 2px solid #ffd700;
-    color: #ffd700;
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    padding: 12px 24px;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: transform 0.15s;
-  }
-  .btn-go-wallet:hover { transform: scale(1.05); }
+  /* Hide the old stacked header/footer elements on desktop */
+  .game-header   { display: none !important; }
+  .open-all-btn  { display: none !important; }
+  .stats-bar     { display: none !important; }
+  .payout-legend { display: none !important; }
+  /* Desktop sidebar versions are shown via the column divs */
+}
 
-  /* ── GAME IFRAME ── */
-  .game-wrap {
-    width: 100%;
-    flex: 1;
-  }
-  .game-wrap iframe {
-    width: 100%;
-    height: calc(100vh - 56px);
-    border: none;
-    display: block;
-    background: #1a1a2e;
-  }
+/* Mobile: hide sidebar cols entirely, show original stacked elements */
+@media (max-width: 699px) {
+  .game-left-col  { display: none !important; }
+  .game-right-col { display: none !important; }
+  .game-center-col { display: contents; }
+}
+
+/* Desktop: hide the mobile-only elements inside center col */
+@media (min-width: 700px) {
+  .game-center-col .stats-bar      { display: none !important; }
+  .game-center-col .payout-legend  { display: none !important; }
+  .game-center-col .game-header    { display: none !important; }
+}
+
+/* Shared sidebar styles */
+.side-btn {
+  width: 100%; padding: 10px 14px; border-radius: 8px; cursor: pointer;
+  font-size: 0.95rem; font-weight: 900; letter-spacing: 1px;
+  border: 2px solid #555; font-family: 'Arial Black', Arial, sans-serif;
+  text-align: center; transition: all 0.15s;
+}
+.side-btn-back { background: #2a2a4a; color: #ccc; border-color: #555; }
+.side-btn-back:hover { background: #444; color: #fff; }
+.side-btn-new  { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; }
+.side-btn-new:hover { transform: scale(1.04); }
+.side-btn-open { background: #333; color: #bbb; border-color: #555; }
+.side-btn-open:hover { background: #555; color: #fff; }
+
+.side-stats {
+  background: #1e1e35; border: 1px solid #444; border-radius: 10px;
+  padding: 12px 14px; font-family: Arial, sans-serif; font-size: 0.8rem; color: #aaa;
+}
+.side-stats .ss-row { display: flex; justify-content: space-between; padding: 3px 0;
+  border-bottom: 1px solid #2a2a4a; }
+.side-stats .ss-row:last-child { border-bottom: none; }
+.side-stats .ss-val { color: #ffd700; font-weight: bold; }
+
+.side-result {
+  font-size: 1.3rem; font-weight: 900; text-align: center;
+  padding: 14px 10px; border-radius: 10px; letter-spacing: 1px;
+}
+.side-result.winner { background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
+.side-result.no-win { background: #333; color: #888; }
+.side-result.pending { background: #2a2a4a; color: #aaa; font-size: 0.9rem; }
+
+.side-legend {
+  background: #1e1e35; border: 1px solid #444; border-radius: 10px;
+  padding: 10px 14px; font-family: Arial, sans-serif; font-size: 0.75rem; color: #bbb;
+}
+.side-legend h3 { color: #ffd700; font-size: 0.8rem; margin-bottom: 6px; text-align: center; }
+
+.menu-btn {
+  position: fixed; top: 12px; right: 14px; z-index: 1000;
+  background: #b8860b; border: 2px solid #ffd700; border-radius: 6px;
+  color: #fff; width: 42px; height: 42px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; cursor: pointer; box-shadow: 0 0 12px rgba(255,215,0,0.4);
+}
+.menu-btn span { display: block; width: 22px; height: 3px; background: #fff; border-radius: 2px; }
+.menu-dropdown {
+  position: fixed; top: 60px; right: 14px; z-index: 1000;
+  background: #1a1a2e; border: 2px solid #ffd700; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.8); display: none;
+}
+.menu-dropdown.open { display: block; }
+.menu-item {
+  display: block; padding: 12px 20px; color: #ffd700;
+  font-size: 13px; font-weight: 900; letter-spacing: 2px;
+  text-transform: uppercase; text-decoration: none; cursor: pointer;
+  white-space: nowrap; border-bottom: 1px solid #333;
+  transition: background 0.15s, color 0.15s; font-family: Arial, sans-serif;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:hover { background: #b8860b; color: #fff; }
+.menu-item .mi-icon { margin-right: 8px; }
 </style>
 </head>
 <body>
 
-<!-- WALLET HUD -->
-<div class="wallet-hud">
-  <div class="hud-balance">
-    <span class="hud-label">WALLET</span>
-    $<span id="hudAmt">0</span>.00
+<!-- Hamburger Menu -->
+<div class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+  <span></span><span></span><span></span>
+</div>
+<div class="menu-dropdown" id="menuDropdown">
+  <a class="menu-item" href="?target=pulltab"><span class="mi-icon">🎰</span>Pull Tab</a>
+</div>
+
+<h1>&#127920; PULL TABS</h1>
+<p class="subtitle">Choose your game &bull; $1 per tab</p>
+<div id="selection-screen">
+  <div class="pick-label">&#8212; SELECT A PULL TAB GAME &#8212;</div>
+  <div class="tab-choices">
+    <div class="tab-choice" onclick="startGame(1)">
+      <div class="tab-num">1</div>
+      <img src="PullTab1Logo.png" alt="Tortoise vs Hare">
+      <div class="tab-name">Tortoise vs. Hare</div>
+    </div>
+    <div class="tab-choice" onclick="startGame(2)">
+      <div class="tab-num">2</div>
+      <img src="PullTab2Logo.png" alt="American Summer">
+      <div class="tab-name">American Summer</div>
+    </div>
+    <div class="tab-choice" onclick="startGame(3)">
+      <div class="tab-num">3</div>
+      <img src="PullTab3Logo.png" alt="Pony Deluxe">
+      <div class="tab-name">Pony Deluxe</div>
+    </div>
+    <div class="tab-choice" onclick="startGame(4)">
+      <div class="tab-num">4</div>
+      <img src="PullTab4Logo.png" alt="Take Me To Your Pull Tabs">
+      <div class="tab-name">Take Me To Your Pull Tabs</div>
+    </div>
   </div>
-  <div class="hud-actions">
-    <a class="hud-btn btn-wallet" href="../wallet.html">← WALLET</a>
-    <button class="hud-btn btn-play" id="btnPullPlay" onclick="spendAndNew()">🎟️ NEW TAB ($1)</button>
+</div>
+<div id="game-screen">
+  <!-- Mobile header (hidden on desktop) -->
+  <div class="game-header">
+    <button id="back-btn" onclick="goBack()">&#8592; Back</button>
+    <button id="new-tab-btn" onclick="newTab()">New Tab &#127903;</button>
+    <button class="open-all-btn-mob" onclick="openAll()">Open All Rows</button>
+    <div id="result-display" class="result-banner pending">Pull rows to play</div>
+  </div>
+
+  <!-- LEFT SIDEBAR (desktop only) -->
+  <div class="game-left-col">
+    <button class="side-btn side-btn-back" onclick="goBack()">&#8592; Back</button>
+    <button class="side-btn side-btn-new"  onclick="newTab()">New Tab &#127903;</button>
+    <button class="side-btn side-btn-open" onclick="openAll()">Open All</button>
+    <div class="side-stats">
+      <div class="ss-row"><span>Played</span><span class="ss-val" id="stat-played-d">0</span></div>
+      <div class="ss-row"><span>Total Won</span><span class="ss-val">$<span id="stat-won-d">0</span></span></div>
+      <div class="ss-row"><span>Last Win</span><span class="ss-val">$<span id="stat-last-d">0</span></span></div>
+    </div>
+  </div>
+
+  <!-- CENTER: the card -->
+  <div class="game-center-col">
+    <div class="pull-tab-card" id="tab-card" data-target="pulltab">
+      <img class="base-image" id="base-img" src="" alt="Pull Tab" style="display:block;">
+      <div id="pt3-logo-wrap" style="display:none; padding:0;">
+        <img id="pt3-logo-img" src="" style="width:100%;display:block;">
+      </div>
+      <div class="grid-overlay" id="grid-overlay"></div>
+    </div>
+    <!-- Mobile-only controls below card -->
+    <div class="stats-bar">
+      Tabs played: <span id="stat-played">0</span>&nbsp;&nbsp;
+      Total won: $<span id="stat-won">0</span>&nbsp;&nbsp;
+      Last win: $<span id="stat-last">0</span>
+    </div>
+    <div class="payout-legend">
+      <h3 id="legend-title">&#127942; PRIZE TABLE (3 of a kind)</h3>
+      <div id="legend-rows"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR (desktop only) -->
+  <div class="game-right-col">
+    <div id="result-display-d" class="side-result pending">Pull rows to play</div>
+    <div class="side-legend">
+      <h3>&#127942; PRIZE TABLE (3 of a kind)</h3>
+      <div id="legend-rows-d"></div>
+    </div>
   </div>
 </div>
-
-<!-- TOAST -->
-<div class="hud-toast" id="hudToast"></div>
-
-<!-- BLOCKED OVERLAY -->
-<div class="blocked-overlay" id="blockedOverlay">
-  <div style="font-size:48px">⛔</div>
-  <div class="bo-msg">OUT OF CREDITS</div>
-  <div class="bo-sub">You need at least $1.00 to play Pull Tabs.</div>
-  <a class="btn-go-wallet" href="../wallet.html">GO TO WALLET</a>
-</div>
-
-<!-- THE GAME -->
-<div class="game-wrap">
-  <iframe id="pullFrame" src="PullTabs/index.html" title="Pull Tabs" allowtransparency="true"></iframe>
-</div>
-
 <script>
-// ─── WALLET HELPERS ──────────────────────────────────────────────────────────
-const WALLET_KEY = 'arcade_wallet';
+var PAYOUTS = [{"prize": 500, "odds": 1}, {"prize": 100, "odds": 5}, {"prize": 20, "odds": 10}, {"prize": 10, "odds": 20}, {"prize": 5, "odds": 20}, {"prize": 2, "odds": 20}, {"prize": 1, "odds": 30}];
+var PRIZE_LABELS = ['$500','$100','$20','$10','$5','$2','$1'];
+var GAME_PRIZE_LABELS = {"1": ["$500 (Trophy)", "$100 (Flag)", "$20 (Turtle)", "$10 (Hare)", "$5 (Clock)", "$2 (Beer)", "$1 (Shots)"], "2": ["$500 (Popsicle)", "$100 (Hot Dog)", "$20 (Bottle)", "$10 (Glasses)", "$5 (Baseball)", "$2 (Can)", "$1 (Beach Ball)"], "3": ["$500 (Laurel)", "$100 (Trophy)", "$20 (Horse)", "$10 (Helmet)", "$5 (Gloves)", "$2 (Saddle)", "$1 (Horseshoe)"], "4": ["$500 (Alien)", "$100 (Earth)", "$20 (Space Bar)", "$10 (Planet)", "$5 (UFO Disc)", "$2 (Meteor)", "$1 (Abduction)"]};
+var IMAGES = {
+  1: ['PullTab1Image1.png','PullTab1Image2.png','PullTab1Image3.png','PullTab1Image4.png','PullTab1Image5.png','PullTab1Image6.png','PullTab1Image7.png'],
+  2: ['PullTab2Image1.png','PullTab2Image2.png','PullTab2Image3.png','PullTab2Image4.png','PullTab2Image5.png','PullTab2Image6.png','PullTab2Image7.png'],
+  3: ['PullTab3Image1.png','PullTab3Image2.png','PullTab3Image3.png','PullTab3Image4.png','PullTab3Image5.png','PullTab3Image6.png','PullTab3Image7.png'],
+  4: ['PullTab4Image1.png','PullTab4Image2.png','PullTab4Image3.png','PullTab4Image4.png','PullTab4Image5.png','PullTab4Image6.png','PullTab4Image7.png']
+};
+var BASE_IMAGES = {
+  1: 'PullTab1BaseImage.jpg',
+  2: 'PullTab2BaseImage.jpg',
+  3: 'PullTab3BaseImage.jpg',
+  4: 'PullTab4BaseImage.jpg'
+};
+var PT3_LOGO = 'PullTab3Logo.png';
 
-function getBalance() {
-  const v = localStorage.getItem(WALLET_KEY);
-  if (v === null) { localStorage.setItem(WALLET_KEY, '20'); return 20; }
-  return parseFloat(v) || 0;
-}
-function setBalance(val) {
-  const clamped = Math.max(0, Math.round(val * 100) / 100);
-  localStorage.setItem(WALLET_KEY, String(clamped));
-  return clamped;
-}
+var currentGame = 1;
+var statsPlayed = 0, statsWon = 0, currentWin = 0, rowsOpened = 0;
+var currentRows = [];
+var TOTAL_ROWS = 7;
+// Track which rows are opened (for save/restore)
+var openedRows = [];
 
-let _toastTmr;
-function toast(msg, type) {
-  const t = document.getElementById('hudToast');
-  t.textContent = msg;
-  t.className = 'hud-toast show ' + (type || '');
-  clearTimeout(_toastTmr);
-  _toastTmr = setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-function renderHud() {
-  const bal = getBalance();
-  document.getElementById('hudAmt').textContent = bal.toFixed(0);
-  const btn = document.getElementById('btnPullPlay');
-  if (bal <= 0) {
-    btn.disabled = true;
-    document.getElementById('blockedOverlay').classList.add('show');
-  } else {
-    btn.disabled = false;
-    document.getElementById('blockedOverlay').classList.remove('show');
-  }
-}
-
-// Spend $1 and load a new pull tab in the iframe
-function spendAndNew() {
-  const bal = getBalance();
-  if (bal <= 0) { renderHud(); return; }
-  const newBal = setBalance(bal - 1);
-  renderHud();
-  toast(`-$1.00 · Balance: $${newBal}`, '');
+// ===== STATE PERSISTENCE =====
+function saveState() {
   try {
-    const fw = document.getElementById('pullFrame').contentWindow;
-    // Try direct calls to the game's new-tab functions
-    if (fw.loadNewTab) fw.loadNewTab();
-    else if (fw.startNewTab) fw.startNewTab();
-    else {
-      // Fall back: reload with a fresh param
-      document.getElementById('pullFrame').src = 'PullTabs/index.html?new=' + Date.now();
-    }
-  } catch(e) {
-    document.getElementById('pullFrame').src = 'PullTabs/index.html?new=' + Date.now();
-  }
+    localStorage.setItem('ptState', JSON.stringify({
+      currentGame: currentGame,
+      currentRows: currentRows,
+      openedRows: openedRows,
+      currentWin: currentWin,
+      rowsOpened: rowsOpened,
+      statsPlayed: statsPlayed,
+      statsWon: statsWon,
+      screenOpen: document.getElementById('game-screen').style.display !== 'none'
+    }));
+  } catch(e) {}
 }
 
-// Patch iframe's win detection to post winnings back
-document.getElementById('pullFrame').addEventListener('load', function() {
+function loadState() {
   try {
-    const fw = this.contentWindow;
+    var s = localStorage.getItem('ptState');
+    if (!s) return false;
+    var d = JSON.parse(s);
+    currentGame   = d.currentGame   || 1;
+    currentRows   = d.currentRows   || [];
+    openedRows    = d.openedRows    || [];
+    currentWin    = d.currentWin    || 0;
+    rowsOpened    = d.rowsOpened    || 0;
+    statsPlayed   = d.statsPlayed   || 0;
+    statsWon      = d.statsWon      || 0;
+    return !!d.screenOpen;
+  } catch(e) { return false; }
+}
 
-    // Intercept the "New Tab" button inside the game
-    const origNew = fw.loadNewTab || fw.startNewTab;
-    if (origNew) {
-      const fnName = fw.loadNewTab ? 'loadNewTab' : 'startNewTab';
-      fw[fnName] = function() {
-        const bal = getBalance();
-        if (bal <= 0) { renderHud(); return; }
-        const newBal = setBalance(bal - 1);
-        renderHud();
-        toast(`-$1.00 · Balance: $${newBal}`, '');
-        origNew.call(fw);
-      };
-    }
+// ===== MENU =====
+function toggleMenu() {
+  document.getElementById('menuDropdown').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var btn = document.getElementById('menuBtn');
+  var dd  = document.getElementById('menuDropdown');
+  if (btn && dd && !btn.contains(e.target) && !dd.contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
 
-    // Watch for wins via the game's result banner element
-    const observer = new fw.MutationObserver(function(mutations) {
-      for (const m of mutations) {
-        const el = fw.document.querySelector('.result-banner.winner');
-        if (el) {
-          const txt = el.textContent || '';
-          const match = txt.match(/\$([0-9]+)/);
-          if (match) {
-            const prize = parseInt(match[1]);
-            if (prize > 0) {
-              const newBal = setBalance(getBalance() + prize);
-              renderHud();
-              toast(`🎉 You won $${prize}! Balance: $${newBal}`, 'win');
-            }
-          }
-        }
+// ===== ISOLATED VIEW (?target=pulltab) =====
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var target = params.get('target');
+  if (target !== 'pulltab') return;
+
+  var style = document.createElement('style');
+  style.textContent = [
+    'body > * { display: none !important; }',
+    'body { display:flex; align-items:center; justify-content:center;',
+    '        padding:0; min-height:100vh; background:#1a1a2e; }',
+    '#isolated-view { display:flex !important; align-items:center;',
+    '                 justify-content:center; width:100vw; min-height:100vh; }'
+  ].join('');
+  document.head.appendChild(style);
+
+  var wrap = document.createElement('div');
+  wrap.id = 'isolated-view';
+  document.body.appendChild(wrap);
+
+  window.addEventListener('DOMContentLoaded', function() {
+    // Try to restore saved state
+    var savedRaw = null;
+    try { savedRaw = localStorage.getItem('ptState'); } catch(e) {}
+
+    if (savedRaw) {
+      var d = JSON.parse(savedRaw);
+      if (d.currentRows && d.currentRows.length > 0) {
+        // Load state into vars
+        currentGame  = d.currentGame  || 1;
+        currentRows  = d.currentRows;
+        openedRows   = d.openedRows   || [];
+        currentWin   = d.currentWin   || 0;
+        rowsOpened   = d.rowsOpened   || 0;
+        statsPlayed  = d.statsPlayed  || 0;
+        statsWon     = d.statsWon     || 0;
+        // Show the card with last tab state
+        applyGameVisuals(currentGame);
+        var card = document.getElementById('tab-card');
+        if (card) wrap.appendChild(card);
+        renderGrid();
+        return;
       }
-    });
-    observer.observe(fw.document.body, { childList: true, subtree: true, characterData: true });
-  } catch(e) {
-    // cross-origin: wallet HUD still works
-  }
-});
+    }
+    // No previous tab — show nothing (empty dark screen)
+  });
+})();
 
-// Listen for explicit postMessage wins from PullTabs
-window.addEventListener('message', function(e) {
-  const d = e.data;
-  if (!d || typeof d !== 'object') return;
-  if (d.type === 'PULLTAB_WIN' && d.prize > 0) {
-    const newBal = setBalance(getBalance() + d.prize);
-    renderHud();
-    toast(`🎉 You won $${d.prize}! Balance: $${newBal}`, 'win');
-  }
-});
+// ===== GAME LOGIC =====
+function goBack() {
+  document.getElementById('selection-screen').style.display = 'flex';
+  document.getElementById('game-screen').style.display = 'none';
+  saveState();
+}
 
-renderHud();
+function applyGameVisuals(n) {
+  var baseImg = document.getElementById('base-img');
+  var pt3wrap = document.getElementById('pt3-logo-wrap');
+  var card    = document.getElementById('tab-card');
+  var overlay = document.getElementById('grid-overlay');
+
+  baseImg.style.display = 'block';
+  baseImg.src = BASE_IMAGES[n];
+  pt3wrap.style.display = 'none';
+  card.className = 'pull-tab-card';
+  overlay.className = 'grid-overlay';
+  overlay.style.position = 'absolute';
+  var logoTops = {1: 198, 2: 181, 3: 188, 4: 204};
+  overlay.style.top = (logoTops[n] || 190) + 'px';
+  overlay.style.bottom = '4px';
+
+  var labels = GAME_PRIZE_LABELS[String(n)];
+  var prizes = ['$500','$100','$20','$10','$5','$2','$1'];
+
+  // Mobile legend
+  var legendRows = document.getElementById('legend-rows');
+  if (legendRows) {
+    legendRows.innerHTML = '';
+    for (var i = 0; i < 7; i++) {
+      var d = document.createElement('div');
+      d.className = 'payout-row-leg';
+      d.innerHTML = '<span>' + labels[i] + '</span><span style="color:#ffd700">' + prizes[i] + '</span>';
+      legendRows.appendChild(d);
+    }
+  }
+  // Desktop legend
+  var legendRowsD = document.getElementById('legend-rows-d');
+  if (legendRowsD) {
+    legendRowsD.innerHTML = '';
+    for (var j = 0; j < 7; j++) {
+      var d2 = document.createElement('div');
+      d2.className = 'payout-row-leg';
+      d2.innerHTML = '<span>' + labels[j] + '</span><span style="color:#ffd700">' + prizes[j] + '</span>';
+      legendRowsD.appendChild(d2);
+    }
+  }
+}
+
+function startGame(n) {
+  currentGame = n;
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  applyGameVisuals(n);
+  generateTab();
+}
+
+function generateTab() {
+  rowsOpened = 0;
+  openedRows = [];
+  currentWin = 0;
+  currentRows = [];
+  for (var i = 0; i < TOTAL_ROWS; i++) currentRows.push({symbols:[0,0,0], isWin:false, prize:0});
+  var usedRows = {};
+  for (var imgIdx = 0; imgIdx < 7; imgIdx++) {
+    var prob = PAYOUTS[imgIdx].odds / (100 * 7);
+    if (Math.random() < prob) {
+      var row, tries = 0;
+      do { row = Math.floor(Math.random() * TOTAL_ROWS); tries++; }
+      while (usedRows[row] && tries < 20);
+      if (!usedRows[row]) {
+        usedRows[row] = true;
+        currentRows[row] = {symbols:[imgIdx,imgIdx,imgIdx], isWin:true, prize:PAYOUTS[imgIdx].prize};
+      }
+    }
+  }
+  for (var r = 0; r < TOTAL_ROWS; r++) {
+    if (!currentRows[r].isWin) {
+      var syms;
+      do {
+        syms = [Math.floor(Math.random()*7), Math.floor(Math.random()*7), Math.floor(Math.random()*7)];
+      } while (syms[0]===syms[1] && syms[1]===syms[2]);
+      currentRows[r].symbols = syms;
+    }
+  }
+  currentWin = currentRows.reduce(function(s,r){return s+r.prize;}, 0);
+  renderGrid();
+  updateResult(false);
+  saveState();
+}
+
+function renderGrid() {
+  var overlay = document.getElementById('grid-overlay');
+  overlay.innerHTML = '';
+  var imgs = IMAGES[currentGame];
+  for (var r = 0; r < TOTAL_ROWS; r++) {
+    var row = currentRows[r];
+    var rowDiv = document.createElement('div');
+    rowDiv.className = 'tab-row';
+    rowDiv.id = 'row-' + r;
+    for (var c = 0; c < 3; c++) {
+      var cell = document.createElement('div');
+      cell.className = 'sym-cell';
+      var img = document.createElement('img');
+      img.src = imgs[row.symbols[c]];
+      cell.appendChild(img);
+      rowDiv.appendChild(cell);
+    }
+    var payCell = document.createElement('div');
+    payCell.className = 'pay-cell' + (row.isWin ? ' winner-pay' : '');
+    payCell.innerHTML = row.isWin ? '<b>' + PRIZE_LABELS[row.symbols[0]] + '<br>WINNER!</b>' : 'NO<br>WINNER';
+    rowDiv.appendChild(payCell);
+    if (row.isWin) {
+      var line = document.createElement('div');
+      line.className = 'win-line';
+      line.id = 'winline-' + r;
+      rowDiv.appendChild(line);
+    }
+    var cover = document.createElement('div');
+    cover.className = 'row-cover';
+    cover.id = 'cover-' + r;
+    cover.innerHTML = '&#9660; PULL';
+    (function(rr){ cover.onclick = function(){ openRow(rr); }; })(r);
+    rowDiv.appendChild(cover);
+    overlay.appendChild(rowDiv);
+  }
+
+  // Restore opened rows from saved state
+  for (var i = 0; i < openedRows.length; i++) {
+    var rr = openedRows[i];
+    var cover2 = document.getElementById('cover-' + rr);
+    if (cover2) cover2.classList.add('removed');
+    if (currentRows[rr].isWin) {
+      var winline = document.getElementById('winline-' + rr);
+      if (winline) winline.style.display = 'block';
+    }
+  }
+}
+
+function openRow(r) {
+  var cover = document.getElementById('cover-' + r);
+  if (!cover || cover.classList.contains('removed')) return;
+  cover.classList.add('removed');
+  rowsOpened++;
+  openedRows.push(r);
+  if (currentRows[r].isWin) {
+    var line = document.getElementById('winline-' + r);
+    if (line) line.style.display = 'block';
+  }
+  if (rowsOpened === TOTAL_ROWS) finishTab();
+  else { updateResult(false); saveState(); }
+}
+
+function openAll() {
+  for (var r = 0; r < TOTAL_ROWS; r++) {
+    var cover = document.getElementById('cover-' + r);
+    if (cover && !cover.classList.contains('removed')) {
+      cover.classList.add('removed');
+      rowsOpened++;
+      openedRows.push(r);
+      if (currentRows[r].isWin) {
+        var line = document.getElementById('winline-' + r);
+        if (line) line.style.display = 'block';
+      }
+    }
+  }
+  finishTab();
+}
+
+function finishTab() {
+  statsPlayed++;
+  statsWon += currentWin;
+  var lastTxt = currentWin > 0 ? currentWin : '0';
+  // Mobile stats
+  document.getElementById('stat-played').textContent = statsPlayed;
+  document.getElementById('stat-won').textContent = statsWon;
+  document.getElementById('stat-last').textContent = lastTxt;
+  // Desktop stats
+  document.getElementById('stat-played-d').textContent = statsPlayed;
+  document.getElementById('stat-won-d').textContent = statsWon;
+  document.getElementById('stat-last-d').textContent = lastTxt;
+  updateResult(true);
+  saveState();
+}
+
+function updateResult(done) {
+  var cls, txt;
+  if (!done) {
+    var rem = TOTAL_ROWS - rowsOpened;
+    cls = 'pending';
+    txt = rem + ' rows left';
+  } else {
+    if (currentWin > 0) { cls = 'winner'; txt = 'WIN $' + currentWin + '!'; }
+    else                 { cls = 'no-win'; txt = 'No Winner'; }
+  }
+  // Mobile banner
+  var el = document.getElementById('result-display');
+  if (el) { el.className = 'result-banner ' + cls; el.textContent = txt; }
+  // Desktop sidebar banner
+  var eld = document.getElementById('result-display-d');
+  if (eld) { eld.className = 'side-result ' + cls; eld.textContent = txt; }
+}
+
+function newTab() { generateTab(); }
+
+// ===== INIT: restore state on load =====
+(function() {
+  var wasOpen = loadState();
+  if (wasOpen && currentRows.length > 0) {
+    document.getElementById('selection-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'flex';
+    applyGameVisuals(currentGame);
+    renderGrid();
+    // Mobile stats
+    document.getElementById('stat-played').textContent = statsPlayed;
+    document.getElementById('stat-won').textContent = statsWon;
+    document.getElementById('stat-last').textContent = '0';
+    // Desktop stats
+    document.getElementById('stat-played-d').textContent = statsPlayed;
+    document.getElementById('stat-won-d').textContent = statsWon;
+    document.getElementById('stat-last-d').textContent = '0';
+    var allOpen = (rowsOpened === TOTAL_ROWS);
+    updateResult(allOpen);
+  }
+})();
 </script>
 </body>
 </html>
