@@ -17,7 +17,6 @@
     overflow-x: hidden;
   }
 
-  /* ── CENTER POPUP ── */
   .center-popup {
     display: none;
     position: fixed;
@@ -44,13 +43,12 @@
     line-height: 1.4;
   }
   .center-popup.win .center-popup-inner  { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 60px rgba(0,255,136,0.35), 0 8px 40px rgba(0,0,0,0.9); }
-  .center-popup.lose .center-popup-inner { border-color: #ff3344; color: #ff3344; box-shadow: 0 0 60px rgba(255,51,68,0.35), 0 8px 40px rgba(0,0,0,0.9); }
+  .center-popup.lose .center-popup-inner { border-color: #ff3344; color: #ff3344; }
   @keyframes popIn {
     from { transform: scale(0.6); opacity: 0; }
     to   { transform: scale(1);   opacity: 1; }
   }
 
-  /* ── BLOCKED OVERLAY ── */
   .blocked-overlay {
     display: none;
     position: fixed;
@@ -94,7 +92,6 @@
   }
   .btn-go-wallet:hover { transform: scale(1.05); }
 
-  /* ── GAME IFRAME ── */
   .game-wrap { width: 100%; flex: 1; }
   .game-wrap iframe {
     width: 100%;
@@ -107,12 +104,10 @@
 </head>
 <body>
 
-<!-- CENTER POPUP -->
 <div class="center-popup" id="centerPopup">
   <div class="center-popup-inner" id="centerPopupMsg"></div>
 </div>
 
-<!-- BLOCKED OVERLAY -->
 <div class="blocked-overlay" id="blockedOverlay">
   <div style="font-size:48px">⛔</div>
   <div class="bo-msg">OUT OF CREDITS</div>
@@ -120,13 +115,15 @@
   <a class="btn-go-wallet" href="../wallet/index.html">GO TO WALLET</a>
 </div>
 
-<!-- THE GAME -->
 <div class="game-wrap">
   <iframe id="pullFrame" src="PullTabs.html" title="Pull Tabs" allowtransparency="true"></iframe>
 </div>
 
 <script>
-const WALLET_KEY = 'arcade_wallet';
+const WALLET_KEY    = 'arcade_wallet';
+// Persistent set of statsPlayed counts that have already been credited.
+// Stored as a JSON array in localStorage so it survives page reloads.
+const CREDITED_KEY  = 'pulltab_credited_plays';
 
 function getBalance() {
   const v = localStorage.getItem(WALLET_KEY);
@@ -137,6 +134,22 @@ function setBalance(val) {
   const clamped = Math.max(0, Math.round(val * 100) / 100);
   localStorage.setItem(WALLET_KEY, String(clamped));
   return clamped;
+}
+
+// ── Credited-play tracking (persists across reloads) ─────────────────────────
+function getCreditedPlays() {
+  try { return new Set(JSON.parse(localStorage.getItem(CREDITED_KEY)) || []); }
+  catch(e) { return new Set(); }
+}
+function markCredited(playCount) {
+  const s = getCreditedPlays();
+  s.add(playCount);
+  // Keep only the last 50 to avoid unbounded growth
+  const arr = [...s].slice(-50);
+  localStorage.setItem(CREDITED_KEY, JSON.stringify(arr));
+}
+function alreadyCredited(playCount) {
+  return getCreditedPlays().has(playCount);
 }
 
 let _popTmr;
@@ -156,20 +169,11 @@ function renderHud() {
   else blocked.classList.remove('show');
 }
 
-// ─── PATCH IFRAME ONCE ON LOAD ────────────────────────────────────────────────
-document.getElementById('pullFrame').addEventListener('load', function() {
-  try {
-    const fw = this.contentWindow;
-    setTimeout(function() { patchIframe(fw); }, 250);
-  } catch(e) {}
-});
-
 function patchIframe(fw) {
   try {
     // ── CHARGE PATCH on generateTab ───────────────────────────────────────────
     if (typeof fw.generateTab === 'function' && !fw._walletPatched) {
       const origGenerate = fw.generateTab;
-
       fw.generateTab = function() {
         if (fw._walletPrepaid) {
           fw._walletPrepaid = false;
@@ -183,54 +187,59 @@ function patchIframe(fw) {
         popup('-$1.00  ·  Balance: $' + newBal, '');
         origGenerate.call(fw);
       };
-
       fw._walletPatched = true;
     }
 
-    // ── WIN PATCH on finishTab ─────────────────────────────────────────────────
-    // Guard: once finishTab fires for a given statsPlayed count, never credit again.
-    // This prevents "Open All" repeated-click double-pays.
+    // ── WIN PATCH on finishTab ────────────────────────────────────────────────
+    // We key credits by statsPlayed stored in localStorage (persists across
+    // reloads). If this play count was already credited in a previous session,
+    // we skip — so returning to a finished winning tab never double-pays.
     if (typeof fw.finishTab === 'function' && !fw._walletWinPatched) {
       const origFinish = fw.finishTab;
-
       fw.finishTab = function() {
-        // If already finished this tab, do nothing
-        if (fw._tabFinished) return;
-        fw._tabFinished = true;
+        origFinish.call(fw); // let game update statsPlayed + currentWin first
 
-        origFinish.call(fw);
-
-        const prize = fw.currentWin;
+        const prize     = fw.currentWin;
         const playCount = fw.statsPlayed;
 
-        if (playCount === fw._lastCreditedPlay) return;
-        fw._lastCreditedPlay = playCount;
+        // Guard 1: already credited this play in a previous or current session
+        if (alreadyCredited(playCount)) return;
 
-        if (prize > 0) {
-          const newBal = setBalance(getBalance() + prize);
-          renderHud();
-          popup('🎉  Pull Tab WIN  $' + prize + '!\nBalance: $' + newBal, 'win');
+        // Guard 2: no prize
+        if (!prize || prize <= 0) {
+          // Still mark as credited so repeated Open All clicks don't re-check
+          markCredited(playCount);
+          return;
         }
+
+        // Credit the win
+        markCredited(playCount);
+        const newBal = setBalance(getBalance() + prize);
+        renderHud();
+        popup('🎉  Pull Tab WIN  $' + prize + '!\nBalance: $' + newBal, 'win');
       };
 
-      // Also patch generateTab to reset _tabFinished for each new tab
-      if (fw._walletPatched) {
-        const alreadyPatched = fw.generateTab;
-        fw.generateTab = function() {
-          fw._tabFinished = false;
-          alreadyPatched.call(fw);
-        };
-      }
+      // Pre-mark the current statsPlayed as already credited on load.
+      // This is the key fix: if the page reloads with a finished tab on screen,
+      // whatever statsPlayed count the game has right now is treated as
+      // already settled — so Open All on it won't pay out again.
+      const currentPlay = fw.statsPlayed || 0;
+      markCredited(currentPlay);
 
       fw._walletWinPatched = true;
-      fw._lastCreditedPlay = fw.statsPlayed || 0;
-      fw._tabFinished = false;
     }
 
   } catch(e) {
     console.warn('[Wallet] patchIframe error:', e);
   }
 }
+
+document.getElementById('pullFrame').addEventListener('load', function() {
+  try {
+    const fw = this.contentWindow;
+    setTimeout(function() { patchIframe(fw); }, 250);
+  } catch(e) {}
+});
 
 renderHud();
 </script>
