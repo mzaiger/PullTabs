@@ -17,7 +17,6 @@
     overflow-x: hidden;
   }
 
-  /* ── WALLET HUD ── */
   .wallet-hud {
     width: 100%;
     background: #0e0c00;
@@ -49,11 +48,7 @@
     display: block;
     margin-bottom: 1px;
   }
-  .hud-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
+  .hud-actions { display: flex; gap: 8px; align-items: center; }
   .hud-btn {
     font-family: 'Arial Black', Arial, sans-serif;
     font-size: 11px;
@@ -76,7 +71,6 @@
     cursor: not-allowed; transform: none; filter: none;
   }
 
-  /* ── TOAST ── */
   .hud-toast {
     position: fixed;
     top: 60px;
@@ -100,7 +94,6 @@
   .hud-toast.win  { border-color: #00ff88; color: #00ff88; }
   .hud-toast.lose { border-color: #ff3344; color: #ff3344; }
 
-  /* ── BLOCKED OVERLAY ── */
   .blocked-overlay {
     display: none;
     position: fixed;
@@ -144,11 +137,7 @@
   }
   .btn-go-wallet:hover { transform: scale(1.05); }
 
-  /* ── GAME IFRAME ── */
-  .game-wrap {
-    width: 100%;
-    flex: 1;
-  }
+  .game-wrap { width: 100%; flex: 1; }
   .game-wrap iframe {
     width: 100%;
     height: calc(100vh - 56px);
@@ -160,7 +149,6 @@
 </head>
 <body>
 
-<!-- WALLET HUD -->
 <div class="wallet-hud">
   <div class="hud-balance">
     <span class="hud-label">WALLET</span>
@@ -172,10 +160,8 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="hud-toast" id="hudToast"></div>
 
-<!-- BLOCKED OVERLAY -->
 <div class="blocked-overlay" id="blockedOverlay">
   <div style="font-size:48px">⛔</div>
   <div class="bo-msg">OUT OF CREDITS</div>
@@ -183,13 +169,11 @@
   <a class="btn-go-wallet" href="../wallet/index.html">GO TO WALLET</a>
 </div>
 
-<!-- THE GAME -->
 <div class="game-wrap">
-  <iframe id="pullFrame" src="PullTabs.html" title="Pull Tabs" allowtransparency="true"></iframe>
+  <iframe id="pullFrame" src="PullTabs/PullTabs.html" title="Pull Tabs" allowtransparency="true"></iframe>
 </div>
 
 <script>
-// ─── WALLET HELPERS ──────────────────────────────────────────────────────────
 const WALLET_KEY = 'arcade_wallet';
 
 function getBalance() {
@@ -225,138 +209,115 @@ function renderHud() {
   }
 }
 
-// ─── SPEND $1 AND LOAD A NEW TAB ─────────────────────────────────────────────
+// ─── SPEND $1 AND GENERATE A NEW TAB ─────────────────────────────────────────
+// This is the ONLY place a charge happens. It sets a flag the patch reads.
 function spendAndNew() {
   const bal = getBalance();
   if (bal <= 0) { renderHud(); return; }
-  const newBal = setBalance(bal - 1);
-  renderHud();
-  toast('-$1.00 · Balance: $' + newBal, '');
+
   try {
     const fw = document.getElementById('pullFrame').contentWindow;
+    // Tell the patch that this generateTab call is pre-paid from outside
+    fw._walletPrepaid = true;
+    const newBal = setBalance(bal - 1);
+    renderHud();
+    toast('-$1.00 · Balance: $' + newBal, '');
     if (typeof fw.generateTab === 'function') fw.generateTab();
     else if (typeof fw.newTab === 'function') fw.newTab();
-  } catch(e) {}
-}
-
-// ─── WIN DETECTION ────────────────────────────────────────────────────────────
-// The game sets currentWin (a number) and calls updateResult(true) when done.
-// We watch #result-display for class change to 'result-banner winner',
-// then read fw.currentWin directly — avoids any regex on prize table text.
-
-let observerAttached = false;
-let lastCreditedWin = null;  // tracks the last statsPlayed value we credited
-
-function attachObserver(fw) {
-  if (observerAttached) return;
-
-  // Watch the result-display element specifically (not body)
-  const el = fw.document.getElementById('result-display') ||
-             fw.document.getElementById('result-display-d');
-  if (!el) {
-    setTimeout(() => attachObserver(fw), 300);
-    return;
-  }
-
-  observerAttached = true;
-  console.log('[Wallet] Observer attached to result-display');
-
-  const observer = new MutationObserver(function() {
-    checkWin(fw);
-  });
-  // Watch both mobile and desktop result elements
-  const elD = fw.document.getElementById('result-display-d');
-  observer.observe(el, { attributes: true, childList: true, characterData: true, subtree: true });
-  if (elD) observer.observe(elD, { attributes: true, childList: true, characterData: true, subtree: true });
-}
-
-function checkWin(fw) {
-  try {
-    // Read currentWin and statsPlayed directly from the iframe's JS scope
-    const prize = fw.currentWin;
-    const playCount = fw.statsPlayed;
-
-    // Only fire once per completed tab (use statsPlayed as unique key)
-    if (typeof prize !== 'number' || prize <= 0) return;
-    if (playCount === lastCreditedWin) return;
-
-    // Verify the result banner actually says winner (tab is fully finished)
-    const el = fw.document.getElementById('result-display') ||
-               fw.document.getElementById('result-display-d');
-    if (!el || !el.classList.contains('winner')) return;
-
-    lastCreditedWin = playCount;
-    const newBal = setBalance(getBalance() + prize);
+  } catch(e) {
+    const newBal = setBalance(bal - 1);
     renderHud();
-    toast('🎉 Pull Tab WIN $' + prize + '! Balance: $' + newBal, 'win');
-    console.log('[Wallet] Pull Tab win credited: $' + prize + ' → balance $' + newBal);
-
-  } catch(e) {
-    console.warn('[Wallet] checkWin error:', e);
+    toast('-$1.00 · Balance: $' + newBal, '');
   }
 }
 
-// ─── ALSO PATCH finishTab SO IN-GAME "New Tab" BUTTONS COST $1 ───────────────
-function patchIframe(fw) {
-  try {
-    // Patch newTab (the "New Tab" button inside the game)
-    if (typeof fw.newTab === 'function' && !fw._walletPatched_newTab) {
-      const orig = fw.newTab;
-      fw.newTab = function() {
-        const bal = getBalance();
-        if (bal <= 0) { renderHud(); return; }
-        const newBal = setBalance(bal - 1);
-        renderHud();
-        toast('-$1.00 · Balance: $' + newBal, '');
-        orig.call(fw);
-      };
-      fw._walletPatched_newTab = true;
-    }
-
-    // Patch generateTab (called by startGame when selecting a game type)
-    // Only charge on explicit user-triggered new tabs, not on restore-state load
-    // We distinguish by checking if game-screen is already visible
-    if (typeof fw.generateTab === 'function' && !fw._walletPatched_generateTab) {
-      const orig = fw.generateTab;
-      fw.generateTab = function() {
-        // Only charge if game screen is visible (player-initiated, not init restore)
-        const gs = fw.document.getElementById('game-screen');
-        const isVisible = gs && gs.style.display !== 'none' && gs.style.display !== '';
-        if (isVisible) {
-          const bal = getBalance();
-          if (bal <= 0) { renderHud(); return; }
-          const newBal = setBalance(bal - 1);
-          renderHud();
-          toast('-$1.00 · Balance: $' + newBal, '');
-        }
-        orig.call(fw);
-      };
-      fw._walletPatched_generateTab = true;
-    }
-
-    console.log('[Wallet] Pull Tab functions patched');
-  } catch(e) {
-    console.warn('[Wallet] patchIframe error:', e);
-  }
-}
-
-// ─── IFRAME LOAD ──────────────────────────────────────────────────────────────
+// ─── PATCH IFRAME ONCE ON LOAD ────────────────────────────────────────────────
 document.getElementById('pullFrame').addEventListener('load', function() {
-  observerAttached = false;
-  lastCreditedWin = null;
-
   try {
     const fw = this.contentWindow;
+
+    // Small delay so the iframe's own scripts finish executing
     setTimeout(function() {
       patchIframe(fw);
-      attachObserver(fw);
     }, 250);
   } catch(e) {
     console.warn('[Wallet] iframe load error:', e);
   }
 });
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+function patchIframe(fw) {
+  try {
+    // ── CHARGE PATCH: only on generateTab (newTab just calls generateTab) ──
+    // We patch generateTab to require either:
+    //   (a) _walletPrepaid flag set by our spendAndNew() above, OR
+    //   (b) the player clicked the in-game "New Tab" button (which means
+    //       the game screen was already open and they chose to buy another)
+    //
+    // We do NOT re-patch if already patched.
+    if (typeof fw.generateTab === 'function' && !fw._walletPatched) {
+      const origGenerate = fw.generateTab;
+
+      fw.generateTab = function() {
+        // If we pre-paid from the HUD button, consume the flag and proceed free
+        if (fw._walletPrepaid) {
+          fw._walletPrepaid = false;
+          origGenerate.call(fw);
+          return;
+        }
+
+        // Otherwise this is an in-game triggered call (New Tab button).
+        // Charge $1 here.
+        const bal = getBalance();
+        if (bal <= 0) {
+          renderHud();
+          return;  // block the tab from generating
+        }
+        const newBal = setBalance(bal - 1);
+        renderHud();
+        toast('-$1.00 · Balance: $' + newBal, '');
+        origGenerate.call(fw);
+      };
+
+      fw._walletPatched = true;
+      console.log('[Wallet] generateTab patched');
+    }
+
+    // ── WIN PATCH: patch finishTab to credit winnings ──────────────────────
+    // finishTab() is called exactly once per completed tab (by openRow when
+    // all rows are revealed, or by openAll). It's the single authoritative
+    // completion point. We track by statsPlayed to avoid double-crediting.
+    if (typeof fw.finishTab === 'function' && !fw._walletWinPatched) {
+      const origFinish = fw.finishTab;
+
+      fw.finishTab = function() {
+        origFinish.call(fw);  // let the game update statsPlayed and currentWin first
+
+        // Now read the final values
+        const prize = fw.currentWin;
+        const playCount = fw.statsPlayed;
+
+        // Guard: only credit if this play count hasn't been credited yet
+        if (playCount === fw._lastCreditedPlay) return;
+        fw._lastCreditedPlay = playCount;
+
+        if (prize > 0) {
+          const newBal = setBalance(getBalance() + prize);
+          renderHud();
+          toast('🎉 Pull Tab WIN $' + prize + '! Balance: $' + newBal, 'win');
+          console.log('[Wallet] Win credited: $' + prize + ' → $' + newBal);
+        }
+      };
+
+      fw._walletWinPatched = true;
+      fw._lastCreditedPlay = fw.statsPlayed || 0;  // don't credit any already-finished tab on load
+      console.log('[Wallet] finishTab patched');
+    }
+
+  } catch(e) {
+    console.warn('[Wallet] patchIframe error:', e);
+  }
+}
+
 renderHud();
 </script>
 </body>
