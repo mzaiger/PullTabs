@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pull Tabs</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    font-family: 'Arial', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* ── WALLET HUD ── */
+  .wallet-hud {
+    width: 100%;
+    background: #0e0c00;
+    border-bottom: 2px solid #ffd700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 16px rgba(255,215,0,0.12);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .hud-balance {
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 8px #ffd70066;
+    letter-spacing: 1px;
+  }
+  .hud-balance .hud-label {
+    font-size: 9px;
+    color: #554400;
+    letter-spacing: 2px;
+    font-weight: normal;
+    display: block;
+    margin-bottom: 1px;
+  }
+  .hud-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .hud-btn {
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 2px solid;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.15s, filter 0.15s;
+    background: none;
+  }
+  .hud-btn:hover { transform: scale(1.06); filter: brightness(1.15); }
+  .btn-wallet { background: #0a0a00; border-color: #ffd700; color: #ffd700; }
+  .btn-play  { background: #332200; border-color: #ff8c00; color: #ff8c00; }
+  .btn-play:disabled {
+    background: #1a1100; border-color: #443300; color: #665522;
+    cursor: not-allowed; transform: none; filter: none;
+  }
+
+  /* ── TOAST ── */
+  .hud-toast {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-120%);
+    background: #0e0c00;
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: #ffd700;
+    z-index: 999;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.8);
+    text-align: center;
+    max-width: 90vw;
+  }
+  .hud-toast.show { transform: translateX(-50%) translateY(0); }
+  .hud-toast.win  { border-color: #00ff88; color: #00ff88; }
+  .hud-toast.lose { border-color: #ff3344; color: #ff3344; }
+
+  /* ── BLOCKED OVERLAY ── */
+  .blocked-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 300;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+    padding: 24px;
+  }
+  .blocked-overlay.show { display: flex; }
+  .blocked-overlay .bo-msg {
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: #ff3344;
+    letter-spacing: 2px;
+  }
+  .blocked-overlay .bo-sub {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    color: #664444;
+    letter-spacing: 1px;
+  }
+  .btn-go-wallet {
+    display: inline-block;
+    background: #0a0a00;
+    border: 2px solid #ffd700;
+    color: #ffd700;
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: transform 0.15s;
+  }
+  .btn-go-wallet:hover { transform: scale(1.05); }
+
+  /* ── GAME IFRAME ── */
+  .game-wrap {
+    width: 100%;
+    flex: 1;
+  }
+  .game-wrap iframe {
+    width: 100%;
+    height: calc(100vh - 56px);
+    border: none;
+    display: block;
+    background: #1a1a2e;
+  }
+</style>
+</head>
+<body>
+
+<!-- WALLET HUD -->
+<div class="wallet-hud">
+  <div class="hud-balance">
+    <span class="hud-label">WALLET</span>
+    $<span id="hudAmt">0</span>.00
+  </div>
+  <div class="hud-actions">
+    <a class="hud-btn btn-wallet" href="../wallet.html">← WALLET</a>
+    <button class="hud-btn btn-play" id="btnPullPlay" onclick="spendAndNew()">🎟️ NEW TAB ($1)</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="hud-toast" id="hudToast"></div>
+
+<!-- BLOCKED OVERLAY -->
+<div class="blocked-overlay" id="blockedOverlay">
+  <div style="font-size:48px">⛔</div>
+  <div class="bo-msg">OUT OF CREDITS</div>
+  <div class="bo-sub">You need at least $1.00 to play Pull Tabs.</div>
+  <a class="btn-go-wallet" href="../wallet.html">GO TO WALLET</a>
+</div>
+
+<!-- THE GAME -->
+<div class="game-wrap">
+  <iframe id="pullFrame" src="PullTabs/index.html" title="Pull Tabs" allowtransparency="true"></iframe>
+</div>
+
+<script>
+// ─── WALLET HELPERS ──────────────────────────────────────────────────────────
+const WALLET_KEY = 'arcade_wallet';
+
+function getBalance() {
+  const v = localStorage.getItem(WALLET_KEY);
+  if (v === null) { localStorage.setItem(WALLET_KEY, '20'); return 20; }
+  return parseFloat(v) || 0;
+}
+function setBalance(val) {
+  const clamped = Math.max(0, Math.round(val * 100) / 100);
+  localStorage.setItem(WALLET_KEY, String(clamped));
+  return clamped;
+}
+
+let _toastTmr;
+function toast(msg, type) {
+  const t = document.getElementById('hudToast');
+  t.textContent = msg;
+  t.className = 'hud-toast show ' + (type || '');
+  clearTimeout(_toastTmr);
+  _toastTmr = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function renderHud() {
+  const bal = getBalance();
+  document.getElementById('hudAmt').textContent = bal.toFixed(0);
+  const btn = document.getElementById('btnPullPlay');
+  if (bal <= 0) {
+    btn.disabled = true;
+    document.getElementById('blockedOverlay').classList.add('show');
+  } else {
+    btn.disabled = false;
+    document.getElementById('blockedOverlay').classList.remove('show');
+  }
+}
+
+// Spend $1 and load a new pull tab in the iframe
+function spendAndNew() {
+  const bal = getBalance();
+  if (bal <= 0) { renderHud(); return; }
+  const newBal = setBalance(bal - 1);
+  renderHud();
+  toast(`-$1.00 · Balance: $${newBal}`, '');
+  try {
+    const fw = document.getElementById('pullFrame').contentWindow;
+    // Try direct calls to the game's new-tab functions
+    if (fw.loadNewTab) fw.loadNewTab();
+    else if (fw.startNewTab) fw.startNewTab();
+    else {
+      // Fall back: reload with a fresh param
+      document.getElementById('pullFrame').src = 'PullTabs/index.html?new=' + Date.now();
+    }
+  } catch(e) {
+    document.getElementById('pullFrame').src = 'PullTabs/index.html?new=' + Date.now();
+  }
+}
+
+// Patch iframe's win detection to post winnings back
+document.getElementById('pullFrame').addEventListener('load', function() {
+  try {
+    const fw = this.contentWindow;
+
+    // Intercept the "New Tab" button inside the game
+    const origNew = fw.loadNewTab || fw.startNewTab;
+    if (origNew) {
+      const fnName = fw.loadNewTab ? 'loadNewTab' : 'startNewTab';
+      fw[fnName] = function() {
+        const bal = getBalance();
+        if (bal <= 0) { renderHud(); return; }
+        const newBal = setBalance(bal - 1);
+        renderHud();
+        toast(`-$1.00 · Balance: $${newBal}`, '');
+        origNew.call(fw);
+      };
+    }
+
+    // Watch for wins via the game's result banner element
+    const observer = new fw.MutationObserver(function(mutations) {
+      for (const m of mutations) {
+        const el = fw.document.querySelector('.result-banner.winner');
+        if (el) {
+          const txt = el.textContent || '';
+          const match = txt.match(/\$([0-9]+)/);
+          if (match) {
+            const prize = parseInt(match[1]);
+            if (prize > 0) {
+              const newBal = setBalance(getBalance() + prize);
+              renderHud();
+              toast(`🎉 You won $${prize}! Balance: $${newBal}`, 'win');
+            }
+          }
+        }
+      }
+    });
+    observer.observe(fw.document.body, { childList: true, subtree: true, characterData: true });
+  } catch(e) {
+    // cross-origin: wallet HUD still works
+  }
+});
+
+// Listen for explicit postMessage wins from PullTabs
+window.addEventListener('message', function(e) {
+  const d = e.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.type === 'PULLTAB_WIN' && d.prize > 0) {
+    const newBal = setBalance(getBalance() + d.prize);
+    renderHud();
+    toast(`🎉 You won $${d.prize}! Balance: $${newBal}`, 'win');
+  }
+});
+
+renderHud();
+</script>
+</body>
+</html>
