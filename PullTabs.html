@@ -1039,6 +1039,35 @@
                 updateResult(allOpen);
             }
         })();
+
+        // ===== LIVE SYNC ACROSS OPEN PAGES =====
+        // Fires in every other same-origin tab/window/iframe (never the one
+        // that made the change) whenever localStorage changes. Used so that
+        // picking a game from the ?target=menu icon strip on one page jumps
+        // any other already-open PullTabs page straight to that new game.
+        window.addEventListener('storage', function(e) {
+            if (e.key !== 'ptState' && e.key !== null) return;
+            if (!loadState() || currentRows.length === 0) return;
+
+            var isoTarget = new URLSearchParams(window.location.search).get('target');
+
+            if (isoTarget === 'menu') return; // icon strip has nothing to refresh
+
+            applyGameVisuals(currentGame);
+            renderGrid();
+            updateResult(rowsOpened === TOTAL_ROWS);
+
+            if (isoTarget === 'pulltab') {
+                // Isolated single-card view: make sure the card is in the wrap
+                var wrap = document.getElementById('isolated-view');
+                var card = document.getElementById('tab-card');
+                if (wrap && card && card.parentNode !== wrap) wrap.appendChild(card);
+            } else {
+                // Full page: jump straight to the game screen with the new tab
+                document.getElementById('selection-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'flex';
+            }
+        });
     </script>
 
 </body>
