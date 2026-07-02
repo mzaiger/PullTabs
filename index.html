@@ -116,10 +116,14 @@
 </div>
 
 <div class="game-wrap">
-  <iframe id="pullFrame" src="PullTabs.html" title="Pull Tabs" allowtransparency="true"></iframe>
+  <iframe id="pullFrame" src="" title="Pull Tabs" allowtransparency="true"></iframe>
 </div>
 
 <script>
+// Forward this page's query string (e.g. ?target=pulltab / ?target=menu)
+// through to the inner game so isolated-view links keep working via index.html
+document.getElementById('pullFrame').src = 'PullTabs.html' + window.location.search;
+
 const WALLET_KEY = 'arcade_wallet';
 
 function getBalance() {
